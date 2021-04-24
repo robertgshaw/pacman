@@ -3,37 +3,15 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include "board.hh"
 
-// handle_connection(cfd) 
-//      
-
-void handle_connection(int cfd) {
-    FILE* fin = fdopen(cfd, "r");
-    FILE* f = fdopen(cfd, "w");
-
-    char buf[BUFSIZ], key[BUFSIZ];
-    size_t sz;
-
-    // search for the text "My name is [x]"
-    // respond with "Hello, [x]" 
-    while (fgets(buf, BUFSIZ, fin)) {
-        if (sscanf(buf, "My name is %s ", key) == 1) {
-            fprintf(f, "Hello, %s\n", key);
-        } else {
-            fprintf(f, "ERROR\r\n");
-            fflush(f);
-        }
-    }
-
-    fclose(fin);
-    fclose(f);
-}
+#define PORT 6169
 
 // main
 //      accepts connections on the sockets
 
 int main(int argc, char** argv) {
-    int port = 6169;
+
     int sfd, cfd, c, read_size;
     struct sockaddr_in server, client;
     char client_message[2000];
@@ -47,7 +25,7 @@ int main(int argc, char** argv) {
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(port);
+    server.sin_port = htons(PORT);
 
     // bind socket
     if (bind(sfd, (struct sockaddr*) &server, sizeof(server)) < 0) {
@@ -60,8 +38,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    printf("Listening on port %d ... \n", port);
+    printf("Listening on port %d ... \n", PORT);
 
+    Board board = Board(5);
+    board.print_board(1);
 
     c = sizeof(struct sockaddr_in);
     cfd = accept(sfd, (struct sockaddr*) &client, (socklen_t*)&c);
