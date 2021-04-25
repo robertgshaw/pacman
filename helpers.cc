@@ -1,5 +1,7 @@
 #include "helpers.hh"
 
+using json = nlohmann::json;
+
 // init_socket()
 //      connect, binds, listens 
 //      returns a socket fd; returns -1 if there was an error
@@ -30,4 +32,18 @@ int init_socket(int port, int max_conns) {
     }
 
     return sfd;
+}
+
+// std::string format_msg(std::string msg)
+//      adds useful headers to the msg
+//      message length, others potentially to be added
+
+std::string format_msg(json body) {
+    std::string body_str = body.dump();
+    std::string msg = "REQUEST len=";
+    msg.append(std::to_string(body_str.size()));
+    msg.append(", body=");
+    msg.append(body_str);
+
+    return msg;
 }

@@ -5,10 +5,13 @@
 #include <unistd.h>
 #include "helpers.hh"
 #include "game.hh"
+#include "nlohmann/json.hpp"
 
 #define PORT 6169
-#define BOARD_SIZE 8
+#define BOARD_SIZE 3
 #define MAX_CONNECTIONS 5
+
+using json = nlohmann::json;
 
 void handle_connection(Player* p, int cfd, Game* g) {
     
@@ -18,7 +21,7 @@ void handle_connection(Player* p, int cfd, Game* g) {
 	// Receive a message from client
 	while ((read_size = recv(cfd, buf, BUFSIZ, 0)) > 0) {
         if (!p->send_board(g->get_board_json())) {
-
+            
             puts("Could not send board to client\n");
             fflush(stdout);
 
@@ -68,8 +71,7 @@ int main(int argc, char** argv) {
     game_.create_player(cfd);
 
     handle_connection(game_.get_player(0), cfd, &game_);
-	
-    close(cfd);
+
     close(sfd);
 
 	return 0;

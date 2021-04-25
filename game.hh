@@ -6,13 +6,17 @@
 #include <cassert>
 #include "board.hh"
 #include "player.hh"
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 class Game {
     public:
         Game(int w);
         void create_player(int cfd);
-        std::string get_board_json();
         Player* get_player(int i);
+
+        json get_board_json();
 
     private:
         Board board_;                    // board holding the shared state

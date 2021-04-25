@@ -4,6 +4,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 struct tuple {
     int n1;
@@ -19,21 +22,13 @@ class Node {
         Node(int i): index(i) { }
         
         // get_json representation of the node
-        std::string get_json() {
-            std::string json("{\"index\":");
-            json.append(std::to_string(index));
+        json get_json() {
+            json j;
+            j["index"] = index;
+            json adj_json(adj);
+            j["adj"] = adj_json;
 
-            json.append(", \"adj\":[");
-            for (int i = 0; i < adj.size(); i++) {
-                json.append(std::to_string(adj[i]));
-                
-                if (i < adj.size() - 1) {
-                    json.append(", ");
-                }
-            }
-
-            json.append("]}");
-            return json;
+            return j;
         }
 };
 
@@ -41,7 +36,7 @@ class Board {
     public:
         Board(int w);
         void print_board(int fd);
-        std::string get_json();
+        json get_json();
 
     private:
         int width;

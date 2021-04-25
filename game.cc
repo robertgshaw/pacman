@@ -1,5 +1,7 @@
 #include "game.hh"
 
+using json = nlohmann::json;
+
 // Game(int w):
 //      Constructor. Creates 2D graph of size W x W   
 
@@ -28,6 +30,7 @@ Player* Game::get_player(int i) {
 //      Converts board into a json object
 //      Returns json 
 
-std::string Game::get_board_json() {
-    return board_.get_json();
+json Game::get_board_json() {
+    json j = board_.get_json();
+    return j;
 }

@@ -1,5 +1,6 @@
-#include <cassert>
 #include "board.hh"
+
+using json = nlohmann::json;
 
 // Board(int w):
 //      Constructor. Creates 2D graph of size W x W     
@@ -17,7 +18,6 @@ void Board::print_board(int fd) {
         for (int j = 0; j < width; j++) {
             str += " X ";
         }
-
         str += "\n";
     }
 
@@ -27,21 +27,16 @@ void Board::print_board(int fd) {
 // std::string get_board_json() 
 //      returns a string with json representation of the board
 
-std::string Board::get_json() {
-    std::string json("{\"width\":");
-    json.append(std::to_string(width));
-    json.append(", \"nodes\":[");
+json Board::get_json() {
+    json j;
+    j["width"] = width;
+    j["nodes"] = json::array();
     
-    for (int i = 0; i < nodes.size(); i++) {
-        json.append(nodes[i].get_json());
-
-        if (i < nodes.size() - 1) {
-            json.append(", ");
-        }
+    for (Node& node: nodes) {
+        j["nodes"].push_back(node.get_json());
     }
 
-    json.append("]}");
-    return json;
+    return j;
 }
 
 // int get_node(int i, int j):

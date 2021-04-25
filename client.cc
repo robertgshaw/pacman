@@ -30,7 +30,6 @@ int main(int argc , char *argv[])
 	//keep communicating with server
 	while(1)
 	{
-		printf("BUFSIZ:%d\n", BUFSIZ);
 		printf("Enter message : ");
 		scanf("%s" , message);
 		
