@@ -9,7 +9,7 @@ int main(int argc , char *argv[])
 	int port = 6169;
     int sfd;
 	struct sockaddr_in server;
-	char message[1000] , server_reply[2000];
+	char message[BUFSIZ] , server_reply[BUFSIZ];
 	
 	//Create socket
 	sfd = socket(AF_INET , SOCK_STREAM , 0);
@@ -30,6 +30,7 @@ int main(int argc , char *argv[])
 	//keep communicating with server
 	while(1)
 	{
+		printf("BUFSIZ:%d\n", BUFSIZ);
 		printf("Enter message : ");
 		scanf("%s" , message);
 		
@@ -40,7 +41,7 @@ int main(int argc , char *argv[])
 		}
 		
 		//Receive a reply from the server
-		if (recv(sfd, server_reply, 2000, 0) < 0) {
+		if (recv(sfd, server_reply, BUFSIZ, 0) < 0) {
 			puts("recv failed");
 			break;
 		}

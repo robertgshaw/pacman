@@ -3,65 +3,71 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include "board.hh"
+#include "helpers.hh"
+#include "game.hh"
 
 #define PORT 6169
+#define BOARD_SIZE 8
+#define MAX_CONNECTIONS 5
 
-// main
-//      accepts connections on the sockets
+void handle_connection(Player* p, int cfd, Game* g) {
+    
+    char buf[BUFSIZ];
+    int read_size;
+
+	// Receive a message from client
+	while ((read_size = recv(cfd, buf, BUFSIZ, 0)) > 0) {
+        if (!p->send_board(g->get_board_json())) {
+
+            puts("Could not send board to client\n");
+            fflush(stdout);
+
+            close(cfd);
+            
+            return;
+        }
+	}
+	
+    // checking why 
+	if (read_size == 0) {
+		puts("Player disconnected\n");
+		fflush(stdout);
+
+	} else if (read_size == -1) {
+		perror("Recv failed");
+	}
+
+    close(cfd);
+    return;
+}
 
 int main(int argc, char** argv) {
 
-    int sfd, cfd, c, read_size;
-    struct sockaddr_in server, client;
-    char client_message[2000];
-    
-    // create socket
-    sfd = socket(AF_INET, SOCK_STREAM, 0);
+    // create socket, bind, and listen 
+    int sfd = init_socket(PORT, MAX_CONNECTIONS);
     if (sfd == -1) {
-        printf("Could not create socket\n");
+        printf("\n\n Could not init socket ... shutting down \n\n");
         return 1;
-    } 
-
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = INADDR_ANY;
-    server.sin_port = htons(PORT);
-
-    // bind socket
-    if (bind(sfd, (struct sockaddr*) &server, sizeof(server)) < 0) {
-        perror("bind");
-        return 1;
+    } else {
+        printf("\n\nListening on port %d ... \n\n", PORT);
     }
 
-    if (listen(sfd, 3) < 0) {
-        perror("listen");
-        return 1;
-    }
+    // create game obj, which will hold the shared state
+    Game game_ = Game(BOARD_SIZE);
 
-    printf("Listening on port %d ... \n", PORT);
-
-    Board board = Board(5);
-    board.print_board(1);
-
-    c = sizeof(struct sockaddr_in);
-    cfd = accept(sfd, (struct sockaddr*) &client, (socklen_t*)&c);
+    // accept client connection, blocking while waiting for connection
+    socklen_t c = sizeof(struct sockaddr);
+    struct sockaddr client;
+    int cfd = accept(sfd, &client, &c);
     if (cfd < 0) {
         perror("accept");
         return 1;
     }
     
-	//Receive a message from client
-	while ((read_size = recv(cfd, client_message, 2000, 0)) > 0) {
-		//Send the message back to client
-		write(cfd, client_message, strlen(client_message));
-	}
-	
-	if (read_size == 0) {
-		puts("Client disconnected");
-		fflush(stdout);
-	} else if (read_size == -1) {
-		perror("recv failed");
-	}
+    // add new_player to the game
+    game_.create_player(cfd);
+
+    handle_connection(game_.get_player(0), cfd, &game_);
 	
     close(cfd);
     close(sfd);

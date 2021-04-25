@@ -4,8 +4,7 @@
 // Board(int w):
 //      Constructor. Creates 2D graph of size W x W     
 
-Board::Board(int w) {
-    width = w;
+Board::Board(int w) : width(w) {
     init_graph(w);
 }
 
@@ -25,6 +24,26 @@ void Board::print_board(int fd) {
     std::cout << str;
 }
 
+// std::string get_board_json() 
+//      returns a string with json representation of the board
+
+std::string Board::get_json() {
+    std::string json("{\"width\":");
+    json.append(std::to_string(width));
+    json.append(", \"nodes\":[");
+    
+    for (int i = 0; i < nodes.size(); i++) {
+        json.append(nodes[i].get_json());
+
+        if (i < nodes.size() - 1) {
+            json.append(", ");
+        }
+    }
+
+    json.append("]}");
+    return json;
+}
+
 // int get_node(int i, int j):
 //      gets the index of the node at row i, column j
 
@@ -39,8 +58,7 @@ int Board::get_node(int i, int j) {
 void Board::init_graph(int w) {
     // iterate through all the nodes
     for (int i = 0; i < w*w; i++) {
-        struct node nd;
-        nd.index = i;
+        Node nd = Node(i);
 
         // add up edge
         if (i >= w) {
