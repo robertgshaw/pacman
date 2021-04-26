@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include <string>
+#include <iostream>
 #include <stdio.h>
 #include <unistd.h>
 #include "helpers.hh"
@@ -21,10 +22,12 @@ class Player {
         bool send_update(json update_json);
 
     private:
+
         int cfd;        // socket of connection
         int id;         // player id "index of connection" 
 
-        bool write_to_socket(std::string msg);      // wrapper around C syscalls 
+        void handle_request(json request);      // handles actual request from client
+        bool write_to_socket(std::string msg);  // wrapper around C syscalls 
 };
 
 #endif

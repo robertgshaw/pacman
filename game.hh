@@ -13,7 +13,7 @@ using json = nlohmann::json;
 class Game {
     public:
         Game(int w);
-        void create_player(int cfd);
+        Player* create_player(int cfd);
         Player* get_player(int i);
 
         json get_board_json();
@@ -21,7 +21,7 @@ class Game {
     private:
         Board board_;                    // board holding the shared state
         std::vector<Player> players_;    // vector of the player sockets currently connected
-        int n_players;                  // count of the number of players
+        int n_players;                   // count of the number of players
 };
 
 

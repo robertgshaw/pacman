@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <iostream>
 #include <string.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -8,51 +9,20 @@
 #include "nlohmann/json.hpp"
 
 #define PORT 6169
-#define BOARD_SIZE 3
+#define BOARD_SIZE 4
 #define MAX_CONNECTIONS 5
 
 using json = nlohmann::json;
-
-void handle_connection(Player* p, int cfd, Game* g) {
-    
-    char buf[BUFSIZ];
-    int read_size;
-
-	// Receive a message from client
-	while ((read_size = recv(cfd, buf, BUFSIZ, 0)) > 0) {
-        if (!p->send_board(g->get_board_json())) {
-            
-            puts("Could not send board to client\n");
-            fflush(stdout);
-
-            close(cfd);
-            
-            return;
-        }
-	}
-	
-    // checking why 
-	if (read_size == 0) {
-		puts("Player disconnected\n");
-		fflush(stdout);
-
-	} else if (read_size == -1) {
-		perror("Recv failed");
-	}
-
-    close(cfd);
-    return;
-}
 
 int main(int argc, char** argv) {
 
     // create socket, bind, and listen 
     int sfd = init_socket(PORT, MAX_CONNECTIONS);
     if (sfd == -1) {
-        printf("\n\n Could not init socket ... shutting down \n\n");
+        printf("Could not init socket...shutting down\n");
         return 1;
     } else {
-        printf("\n\nListening on port %d ... \n\n", PORT);
+        printf("Listening on port %d...\n", PORT);
     }
 
     // create game obj, which will hold the shared state
@@ -68,9 +38,8 @@ int main(int argc, char** argv) {
     }
     
     // add new_player to the game
-    game_.create_player(cfd);
-
-    handle_connection(game_.get_player(0), cfd, &game_);
+    Player* p_ptr = game_.create_player(cfd);
+    p_ptr->handle_connection();
 
     close(sfd);
 

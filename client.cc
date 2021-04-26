@@ -1,8 +1,13 @@
-#include <stdio.h>	//printf
-#include <string.h>	//strlen
-#include <sys/socket.h>	//socket
-#include <arpa/inet.h>	//inet_addr
+#include <stdio.h>		// printf
+#include <string.h>		// strlen
+#include <sys/socket.h> // socket
+#include <arpa/inet.h>	// inet_addr
 #include <unistd.h>
+#include <iostream>
+#include "helpers.hh"
+#include "nlohmann/json.hpp"
+
+using json = nlohmann::json;
 
 int main(int argc , char *argv[])
 {
@@ -11,7 +16,7 @@ int main(int argc , char *argv[])
 	struct sockaddr_in server;
 	char message[BUFSIZ] , server_reply[BUFSIZ];
 	
-	//Create socket
+	// create socket
 	sfd = socket(AF_INET , SOCK_STREAM , 0);
 	if (sfd == -1) {
 		printf("Could not create socket");
@@ -21,32 +26,36 @@ int main(int argc , char *argv[])
 	server.sin_family = AF_INET;
 	server.sin_port = htons(port);
 
-	//Connect to remote server
+	// connect to remote server
 	if (connect(sfd, (struct sockaddr*) &server, sizeof(server)) < 0) {
 		perror("connect failed. Error");
 		return 1;
 	}
 		
-	//keep communicating with server
-	while(1)
-	{
+	// send messages to the server
+	json j;
+	while(1) {
+		// get command from the commandline
 		printf("Enter message : ");
 		scanf("%s" , message);
-		
-		//Send some data
-		if (send(sfd, message, strlen(message), 0) < 0)	{
+		j["update"] = message;
+		std::string msg_to_send = format_msg(j);
+		std::cout << msg_to_send << std::endl;
+
+		// send command to the server
+		if (send(sfd, msg_to_send.c_str(), msg_to_send.size(), 0) < 0)	{
 			puts("Send failed");
 			return 1;
 		}
 		
-		//Receive a reply from the server
-		if (recv(sfd, server_reply, BUFSIZ, 0) < 0) {
-			puts("recv failed");
-			break;
-		}
+		// // Receive a reply from the server
+		// if (recv(sfd, server_reply, BUFSIZ, 0) < 0) {
+		// 	puts("recv failed");
+		// 	break;
+		// }
 		
-		puts("Server reply :");
-		puts(server_reply);
+		// puts("Server reply :");
+		// puts(server_reply);
 	}
 	
 	close(sfd);
