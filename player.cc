@@ -3,9 +3,10 @@
 using json = nlohmann::json;
 
 // Player(int client_fd, int ind)
-//      Constructor
+//      Constructor, inits vars
 
-Player::Player(int client_fd, int ind) : cfd(client_fd), id(ind) { }
+Player::Player(int client_fd, int ind, Game* g) : 
+    cfd(client_fd), id(ind), g_ptr(g) { }
 
 // handle_connection()
 //      Reads from the socket for any client requests
@@ -20,9 +21,12 @@ void Player::handle_connection() {
     char equals_sign;
     std::string request;
 
+    g_ptr->print_board();
+    std::cout << std::endl;
+
     // read the client request from the file
     //      skip_get == true when we know there is already a well formed header already in buf
-    while (skip_get || recv(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf), 0) > 0) {
+    while (skip_get || recv(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf), 0) > 0) {    
 
         // parse the request of form REQUEST len=XXX, body=YYY      
         if (sscanf(buf_ptr, "REQUEST len=%d, body%c", &len, &equals_sign) == 2 && equals_sign == '=') {
@@ -112,5 +116,31 @@ bool Player::write_to_socket(std::string msg) {
 //      Handle request from the client
 
 void Player::handle_request(json request) {
-    std::cout << request.dump(4) << std::endl;
+    std::cout << request.dump() << std::endl;
+
+    // check to see if a move request
+    if (request.find("move") != request.end()) {
+        
+        std::string dir = request["move"];
+        // TODO handle typerrors --- should be wrapped in try catch
+
+        // parse command + send to game API
+        if (dir == "up"){
+            g_ptr->move_player(id, UP);
+        } else if (dir == "down") {
+            g_ptr->move_player(id, DOWN);
+        } else if (dir == "left") {
+            g_ptr->move_player(id, LEFT);
+        } else if (dir == "right") {
+            g_ptr->move_player(id, RIGHT);
+        } else {
+            std::cout << "ERROR: invalid move command" << std::endl;
+        }
+    } else {
+        std::cout << "ERROR: not a move command" << std::endl;
+    }
+
+    g_ptr->print_board();
+    std::cout << std::endl;
+
 }

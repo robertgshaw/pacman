@@ -38,6 +38,7 @@ int main(int argc, char** argv) {
     }
     
     // add new_player to the game
+    int ind = 0; // ctr, to grow as we add more connections
     Player* p_ptr = game_.create_player(cfd);
     p_ptr->handle_connection();
 

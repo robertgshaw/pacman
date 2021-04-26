@@ -38,7 +38,7 @@ int main(int argc , char *argv[])
 		// get command from the commandline
 		printf("Enter message : ");
 		scanf("%s" , message);
-		j["update"] = message;
+		j["move"] = message;
 		std::string msg_to_send = format_msg(j);
 		std::cout << msg_to_send << std::endl;
 

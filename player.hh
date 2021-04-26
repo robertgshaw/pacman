@@ -6,15 +6,21 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "helpers.hh"
+#include "game.hh"
 #include "nlohmann/json.hpp"
+
+#define UP 0
+#define RIGHT 1
+#define DOWN 2
+#define LEFT 3
 
 using json = nlohmann::json;
 
-// Player class implements the underlying API
+class Game;
 
 class Player {
     public:
-        Player(int client_fd, int ind);
+        Player(int client_fd, int ind, Game* g);
         void handle_connection();
 
         // API calls
@@ -22,6 +28,7 @@ class Player {
         bool send_update(json update_json);
 
     private:
+        Game* g_ptr;    // pointer to the shared game object
 
         int cfd;        // socket of connection
         int id;         // player id "index of connection" 
