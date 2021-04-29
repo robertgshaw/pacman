@@ -4,7 +4,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <optional>
+#include <thread>
+#include <mutex>
 #include "nlohmann/json.hpp"
 
 #define UP 0
@@ -41,8 +42,9 @@ class Node {
 
 class Board {
     public:
-        // constructor
-        Board(int w);
+        void init_graph(int w);
+        // Board(Board const&) = delete;
+        //Board& operator=(Board const&) = delete;
 
         // update the board state
         void add_player(int player_id);
@@ -58,8 +60,11 @@ class Board {
         std::vector<Node> nodes;
         std::vector<int> p_locations;
 
+        // mutex used to lock shared state
+        std::mutex b_mutex;
+
         // private helpers / utilites
-        void init_graph(int w);
+        
         int get_loc(int i, int j);
 
 };

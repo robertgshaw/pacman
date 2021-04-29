@@ -48,14 +48,16 @@ int main(int argc , char *argv[])
 			return 1;
 		}
 		
-		// // Receive a reply from the server
-		// if (recv(sfd, server_reply, BUFSIZ, 0) < 0) {
-		// 	puts("recv failed");
-		// 	break;
-		// }
+		// Receive a reply from the server
+		if (recv(sfd, server_reply, BUFSIZ, 0) < 0) {
+			puts("recv failed");
+			break;
+		}
 		
-		// puts("Server reply :");
-		// puts(server_reply);
+		if (server_reply) {
+			puts("Server reply :");
+			puts(server_reply);
+		}
 	}
 	
 	close(sfd);

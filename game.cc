@@ -2,26 +2,31 @@
 
 using json = nlohmann::json;
 
-// Game(int w):
-//      Constructor. Creates 2D graph of size W x W   
+// Game::init(int w):
+//      Starts the game   
+//      Copy Constructor deleted given mutex + game should not be copied
 
-Game::Game(int w) : board_(Board(w)), n_players(0) {
+Game::Game(int w) { 
+    board_.init_graph(w);
+    n_players = 0;
+
+    return;
 }
 
-// Player* create_player(int cfd, int index)
+// void create_player(int cfd, int index)
 //      Creates new player and adds to player vector
 
-Player* Game::create_player(int cfd) {
-    Player new_player = Player(cfd, n_players, this);
-    players_.push_back(new_player);
+int Game::create_player(int cfd) {
+    // Player new_player = Player(cfd, n_players, this);
+
+    // std::unique_lock<std::mutex> lock(g_mutex);
+    // players_.push_back(new_player);
+    // lock.unlock();
+
     board_.add_player(n_players);
-
     n_players++;
-    
-    // invariant that n_players should equal size of player vector
-    assert(n_players == players_.size());
 
-    return &players_.back();
+    return n_players - 1;
 }
 
 // void move_player(int i)
@@ -29,13 +34,6 @@ Player* Game::create_player(int cfd) {
 
 void Game::move_player(int player_id, int dir) {
     board_.move_player(player_id, dir);
-}
-
-// Player* get_player(int i)
-//      gets the ith player from the players vector
-
-Player* Game::get_player(int i) {
-    return &(players_[i]);
 }
 
 /*
