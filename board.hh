@@ -13,8 +13,6 @@
 #define DOWN 2
 #define LEFT 3
 
-using json = nlohmann::json;
-
 struct tuple {
     int n1;
     int n2;
@@ -30,10 +28,10 @@ class Node {
         Node(int i): index(i), player_id(-1) { }
         
         // get_json representation of the node
-        json get_json() {
-            json j;
+        nlohmann::json get_json() {
+            nlohmann::json j;
             j["index"] = index;
-            json adj_json(adj);
+            nlohmann::json adj_json(adj);
             j["adj"] = adj_json;
 
             return j;
@@ -52,7 +50,7 @@ class Board {
 
         // serialize / outputting data
         void print();
-        json get_json();
+        nlohmann::json get_json();
 
     private:
         // board state
@@ -64,7 +62,6 @@ class Board {
         std::mutex b_mutex;
 
         // private helpers / utilites
-        
         int get_loc(int i, int j);
 
 };

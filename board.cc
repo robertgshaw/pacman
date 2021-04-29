@@ -18,19 +18,19 @@ void Board::init_graph(int w) {
         Node nd = Node(i);
 
         if (i >= w) {
-            nd.adj.push_back(i - w);    // add up edge
+            nd.adj.push_back(i - w);    // add UP edge
         }
-        
+
         if (i % w != 0) {
-            nd.adj.push_back(i - 1);    // add left edge
+            nd.adj.push_back(i - 1);    // add LEFT edge
         }
         
         if (i % w != w - 1) {
-            nd.adj.push_back(i + 1);    // add right edge
+            nd.adj.push_back(i + 1);    // add RIGHT edge
         }
         
         if (i < w*(w-1)) {
-            nd.adj.push_back(i + w);    // add bottom edge
+            nd.adj.push_back(i + w);    // add BOTTOM edge
         }
         
         nodes.push_back(nd);            // add to node_arr
@@ -68,7 +68,6 @@ void Board::add_player(int player_id) {
 //      p_locations vector -- updating p_locations[player_id]
 
 void Board::move_player(int player_id, int dir) {
-    std::cout << "move player called by pid " << std::to_string(player_id) << std::endl;
 
     // invariant that direction is UP (0), RIGHT (1), DOWN (2), or LEFT (3)
     assert(dir < 4);
@@ -94,9 +93,6 @@ void Board::move_player(int player_id, int dir) {
     } else if (dir == DOWN && loc < width * (width - 1)) {      // loc > width * width - 1 => bottom row
         new_loc = loc + width;
     }
-    
-    std::cout << "new loc = " << std::to_string(new_loc) << std::endl;
-    std::cout << "player id = " << std::to_string(nodes[new_loc].player_id) << std::endl;
 
     // if move was valid and we have a new loc, update state
     if (new_loc != loc && nodes[new_loc].player_id == -1) {

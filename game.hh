@@ -19,17 +19,13 @@ class Game {
         Game(int w);
         
         int create_player(int cfd);
-        // Player* get_player(int i);
         void move_player(int player_id, int dir);
         
         void print_board(); 
         json get_board_json();
 
     private:
-
-        // std::mutex g_mutex;             // mutex used to lock the player vector
         Board board_;                   // board holding the shared state
-        // std::vector<Player> players_;   // vector holding the players
         int n_players;                  // count of the number of players
 };
 

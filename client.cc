@@ -1,63 +1,66 @@
-#include <stdio.h>		// printf
-#include <string.h>		// strlen
+// #include <stdio.h>		// printf
 #include <sys/socket.h> // socket
 #include <arpa/inet.h>	// inet_addr
 #include <unistd.h>
 #include <iostream>
-#include "helpers.hh"
+#include "client_helpers.hh"
 #include "nlohmann/json.hpp"
 
 using json = nlohmann::json;
 
-int main(int argc , char *argv[])
-{
-	int port = 6169;
+static const int port = 6169;
+static const char* path = "127.0.0.1";
+
+int main(int argc , char *argv[]) {
+
     int sfd;
 	struct sockaddr_in server;
-	char message[BUFSIZ] , server_reply[BUFSIZ];
+	std::string message;
+	char server_reply[BUFSIZ];
 	
 	// create socket
-	sfd = socket(AF_INET , SOCK_STREAM , 0);
+	sfd = socket(AF_INET, SOCK_STREAM, 0);
 	if (sfd == -1) {
-		printf("Could not create socket");
+		std::cout << "Could not create socket";
+		return 1;
 	}
 	
-	server.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server.sin_addr.s_addr = inet_addr(path);
 	server.sin_family = AF_INET;
 	server.sin_port = htons(port);
 
 	// connect to remote server
 	if (connect(sfd, (struct sockaddr*) &server, sizeof(server)) < 0) {
-		perror("connect failed. Error");
+		std::cerr << "Connect failed. Error";
 		return 1;
 	}
 		
 	// send messages to the server
-	json j;
-	while(1) {
+	while (true) {
+
 		// get command from the commandline
-		printf("Enter message : ");
-		scanf("%s" , message);
+		std::cout << "Enter move: ";
+		std::cin >> message;
+
+		json j;
 		j["move"] = message;
-		std::string msg_to_send = format_msg(j);
-		std::cout << msg_to_send << std::endl;
+		std::string msg_to_send = format_client_request(j);
 
 		// send command to the server
 		if (send(sfd, msg_to_send.c_str(), msg_to_send.size(), 0) < 0)	{
-			puts("Send failed");
+			std::cerr << "Send failed";
+			close(sfd);
 			return 1;
 		}
 		
-		// Receive a reply from the server
+		// receive a reply from the server
 		if (recv(sfd, server_reply, BUFSIZ, 0) < 0) {
-			puts("recv failed");
-			break;
+			std::cerr << "Recv failed";
+			close(sfd);
+			return 1;
 		}
-		
-		if (server_reply) {
-			puts("Server reply :");
-			puts(server_reply);
-		}
+
+		std::cout << "Server reply: " << server_reply << std::endl;
 	}
 	
 	close(sfd);
