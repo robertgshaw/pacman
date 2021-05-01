@@ -1,33 +1,57 @@
 #include "helpers.hh"
+#include "event.hh"
+
 using json = nlohmann::json;
 
-// This file contains code which implements the communication API
-// as well as some basic wrappers around SYSCALL utilities 
+// This file supports server.cc and contains:
+//      1) Client-server communication API 
+//      2) Wrappers Around Basic Socket Syscalls 
 
-/*
- *
- ***** Handles API Calls *****
- *
- */
-
-// API defined as follows
-//      Clients send requests of form REQUEST len=[int], body=[command]
-//          List of client commands described below (handle request function)
 //
-//      Server sends [TBU]
+//
+// ********** API IMPLEMENTATION **********
+//
+//
 
-// constants that define the API
-static const char* request_format = "REQUEST len=%d, body%c";
-static const char* body_request_format = "body=";
-static const int body_keyword_len = 5; // "body=" is 5 chars
+// API defined as follows:
+//      (A) Clients send requests containing commands to the server
+//          Command are of form     REQUEST len=[int], body=[request]
+//
+//      (B) Server listens to the changelog; when events pushed sends to client
+//          Events are of form      EVENT len=[int], body=[event]
+
+// void handle_player(cfd, player_id, g_ptr, board_json)
+//      (1) Initializes client by sending across the board_json as is
+//      (2) Spins up new thread to listen for the changelog (part B of API)
+//      (3) Uses this thread to listen for client commands (part A of API)
+
+void handle_player(int cfd, int player_id, Game* g_ptr, json board_json) {
+    
+    // 1) send initial board to the socket
+    if (!write_to_socket(cfd, format_server_msg(board_json, board_header, board_body_header))) {
+        std::cerr << "Failed to send board for p_id:" << std::to_string(player_id) << std::endl;
+        close(cfd);
+        return;
+    }
+
+    // (2) spin up thread to listen to changelog
+    std::thread t(handle_changelog, cfd, player_id, g_ptr);
+    t.detach();
+
+    // (3) use this thread to listen to for user commands on the socket
+    handle_connection(cfd, player_id, g_ptr);
+
+    return;
+
+}
+
+
+// (A) CLIENT REQUESTS
 
 // void handle_connection(cfd, player_id, g_ptr)
-//      MAIN LOOP EXECUTED BY THE THREAD, does two things
+//      MAIN LOOP EXECUTED BY THE THREAD, handling client requests:
 //          1)  Reads from the socket, looking for client requests,
 //              + handling the commands in the requests
-//
-//          2)  Sends events that are happening to the client,
-//              while listening to the changelog
 
 void handle_connection(int cfd, int player_id, Game* g_ptr) {
 
@@ -46,12 +70,12 @@ void handle_connection(int cfd, int player_id, Game* g_ptr) {
     while (skip_get || recv(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf), 0) > 0) {    
 
         // parse the request of form REQUEST len=XXX, body=YYY      
-        if (sscanf(buf_ptr, request_format, &len, &equals_sign) == 2 && equals_sign == '=') {
+        if (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=') {
             
             // extract the REQUEST body from the string
             request = buf_ptr;
             nread = request.size();           
-            body_start_ind = request.find(body_request_format) + body_keyword_len;    
+            body_start_ind = request.find(client_body_request_format) + client_body_keyword_len;    
             body_len_in_buf = std::min(len, nread - body_start_ind);
             request = request.substr(body_start_ind, body_len_in_buf);
 
@@ -61,7 +85,7 @@ void handle_connection(int cfd, int player_id, Game* g_ptr) {
                 
                 // move the buffer pointer over to the start of the next request, update skip flag
                 buf_ptr += body_start_ind + len;
-                skip_get = (sscanf(buf_ptr, request_format, &len, &equals_sign) == 2 && equals_sign == '=');
+                skip_get = (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=');
 
             // IF (buffer did not contain the entire request), read until we have the whole thing
             } else {
@@ -88,6 +112,7 @@ void handle_connection(int cfd, int player_id, Game* g_ptr) {
             // TODO: return some type of error
         }
     }
+
     close(cfd);
 }
 
@@ -137,18 +162,59 @@ void handle_request(json request, int cfd, int player_id, Game* g_ptr) {
     std::cout << std::endl;
 }
 
-/* 
- *
- ***** WRAPPERS AROuND SYSCALLS *****
- *
- */
+// (B) CHANGELOG EVENTS
+
+// void handle_changelog(cfd, player_id, g_ptr)
+//      MAIN LOOP EXECUTED BY THE THREAD, subscribes to the changelog
+//          1)  Listens to events in the changelog, sending them to the client side
+
+void handle_changelog(int cfd, int player_id, Game* g_ptr) {
+    
+    // loop continuously until the the socket is disconnected by the client
+    bool is_connected = true;  
+    while(is_connected) {
+
+        // get event from changelog (note: this blocks until event ready) 
+        Event e = g_ptr->get_next_event(player_id);
+    
+        // write the event to the socket in the API form:
+        //      EVENT len=[int], body=[events]
+        is_connected = write_to_socket(cfd, format_server_msg(e.get_json(), event_header, event_body_header));
+    }
+
+    return;
+}
+
+/// std::string format_server_board(json board)
+//      wraps the sever board in the API wrapper
+//      will be of form BOARD len=[xxx], body=[board]...
+
+
+std::string format_server_msg(nlohmann::json command, const char* header, const char* body_header) {
+    // extract the body into string form
+    std::string body_str = command.dump();
+
+    // create the message to send
+    std::string msg = header;                       // COMMAND len=
+    msg.append(std::to_string(body_str.size()));    // COMMAND len=xxx
+    msg.append(body_header);                        // COMMAND len=xxx, body=
+    msg.append(body_str);                           // COMMAND len=xxx, body=abcdef...
+
+    return msg;
+}
+
+// 
+//
+// ********** SYSCALL WRAPPERS **********
+//
+//
 
 // write_to_socket(cfd, msg)
 //      wrapper around underlying c syscalls
 //      returns true if successfully wrote entire message
 
 bool write_to_socket(int cfd, std::string msg) {
-    // 
+
     int n_written = write(cfd, msg.c_str(), msg.size());
     if (n_written < msg.size()) {
         std::cerr << "Error writing to client on cdf" << std::to_string(cfd) << std::endl;

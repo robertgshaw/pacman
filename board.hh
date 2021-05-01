@@ -4,8 +4,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <thread>
-#include <mutex>
 #include "nlohmann/json.hpp"
 
 #define UP 0
@@ -45,8 +43,8 @@ class Board {
         //Board& operator=(Board const&) = delete;
 
         // update the board state
-        void add_player(int player_id);
-        void move_player(int player_id, int dir);
+        int add_player(int player_id);
+        bool move_player(int player_id, int dir);
 
         // serialize / outputting data
         void print();
@@ -57,9 +55,6 @@ class Board {
         int width;
         std::vector<Node> nodes;
         std::vector<int> p_locations;
-
-        // mutex used to lock shared state
-        std::mutex b_mutex;
 
         // private helpers / utilites
         int get_loc(int i, int j);

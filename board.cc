@@ -14,43 +14,44 @@ using json = nlohmann::json;
 
 void Board::init_graph(int w) {
     width = w;
-    for (int i = 0; i < w*w; i++) {     // iterate through all the nodes
+
+    // iterate through all the nodes
+    for (int i = 0; i < w*w; i++) {
         Node nd = Node(i);
-
+        // add UP edge
         if (i >= w) {
-            nd.adj.push_back(i - w);    // add UP edge
+            nd.adj.push_back(i - w);    
         }
-
+        // add LEFT edge
         if (i % w != 0) {
-            nd.adj.push_back(i - 1);    // add LEFT edge
+            nd.adj.push_back(i - 1);    
         }
-        
+        // add RIGHT edge
         if (i % w != w - 1) {
-            nd.adj.push_back(i + 1);    // add RIGHT edge
+            nd.adj.push_back(i + 1);
         }
-        
+        // add BOTTOM edge
         if (i < w*(w-1)) {
-            nd.adj.push_back(i + w);    // add BOTTOM edge
+            nd.adj.push_back(i + w);
         }
-        
-        nodes.push_back(nd);            // add to node_arr
+        // add to node_arr
+        nodes.push_back(nd);
     }
 }
 
-// add_player(player_id)
-//      has CRITICAL SECTION
+// int add_player(player_id)
 //      adds player_id to the game at random i,j by: 
 //      adds player_id into the node vector
 //      adds player_id into the p_locations vector
+//      returns the location where the player was inserted
 
-void Board::add_player(int player_id) {
-    
-    // choose random location to start at
-    int ind = get_loc(std::rand() % width, std::rand() % width);
+int Board::add_player(int player_id) {
+    // choose random location to start at, redoing until one is open
+    int ind;
+    do {
+        ind = get_loc(std::rand() % width, std::rand() % width);
+    } while (nodes[ind].player_id != -1);
 
-    // CRITICAL SECTION ------ shared state across all the players
-    std::lock_guard<std::mutex> lock(b_mutex);
-    
     // insert into the nodes tracker
     nodes[ind].player_id = player_id;
 
@@ -58,25 +59,22 @@ void Board::add_player(int player_id) {
     assert(player_id == p_locations.size());
     p_locations.push_back(ind);
 
-    return;
+    return ind;
 }
 
-// move_player(player_id)
-//      has CRITICAL SECTION
+// bool move_player(player_id)
 //      moves player from current location updating in:
 //      nodes vector -- updating nodes.player_id
 //      p_locations vector -- updating p_locations[player_id]
+//      returns true if the player made a move
 
-void Board::move_player(int player_id, int dir) {
+bool Board::move_player(int player_id, int dir) {
 
     // invariant that direction is UP (0), RIGHT (1), DOWN (2), or LEFT (3)
     assert(dir < 4);
     
     // invariant that the player_id passed is an actual player
     assert(player_id < p_locations.size());
-
-    // CRITICAL SECTION --- accessing / updating shared state
-    std::lock_guard<std::mutex> lock(b_mutex);
 
     // get current loc of the plaer
     int loc = p_locations[player_id];
@@ -102,9 +100,11 @@ void Board::move_player(int player_id, int dir) {
 
         // update p_locations vector
         p_locations[player_id] = new_loc;
+
+        return true;    // move successful
     }
 
-    return;
+    return false;       // move not successful
 }
 
 /*

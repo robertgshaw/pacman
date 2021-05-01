@@ -9,7 +9,6 @@
 #include "helpers.hh"
 #include "game.hh"
 
-// constants for the game
 static const int port = 6169;
 static const int board_size = 4;
 static const int max_players =  5;
@@ -30,27 +29,32 @@ int main(int argc, char** argv) {
     // create game obj, which will hold the shared state
     Game game_(board_size);
 
-    // accept client connection, blocking while waiting for connection
+    // vars used for the socket
     socklen_t c = sizeof(struct sockaddr);
     struct sockaddr_in client;
 
+    // vars used to init a connection
     int player_id;
+    json board_json;
+
+    // accept new client connections, blocking while waiting 
     while(true) {
         int cfd = accept(sfd, (sockaddr*) &client, &c);
         if (cfd < 0) {
 
-            // todo: tell threads that we are dead + that it should shut down
-
+            // TODO: tell threads that we are dead + that it should shut down
+            
             perror("accept");
             close(cfd);
             close(sfd);
             return 1;
         }
         
-        // launch thread to handle the connection
-        player_id = game_.create_player(cfd);
-        std::thread t(handle_connection, cfd, player_id, &game_);
+        // create player + launch thread to listen to CL + Player Commands
+        std::tie(player_id, board_json) = game_.create_player(cfd);
+        std::thread t(handle_player, cfd, player_id, &game_, board_json);
         t.detach();
+
     } 
 
     close(sfd);
