@@ -122,7 +122,6 @@ void handle_connection(int cfd, int player_id, Game* g_ptr) {
 //          1)  "move":"dir" --- dir = up, down, left, right (moves the player on the board)
 
 void handle_request(json request, int cfd, int player_id, Game* g_ptr) {
-    std::cout << request.dump() << std::endl;
 
     std::string response;
 
@@ -155,7 +154,7 @@ void handle_request(json request, int cfd, int player_id, Game* g_ptr) {
     }
     
     // send response to the client
-    write_to_socket(cfd, response);
+    //write_to_socket(cfd, response);
     
     // print board out for the time being to observe state
     g_ptr->print_board();
@@ -175,11 +174,11 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
     while(is_connected) {
 
         // get event from changelog (note: this blocks until event ready) 
-        Event e = g_ptr->get_next_event(player_id);
-    
+        json e_json = g_ptr->get_next_event(player_id);
+        
         // write the event to the socket in the API form:
         //      EVENT len=[int], body=[events]
-        is_connected = write_to_socket(cfd, format_server_msg(e.get_json(), event_header, event_body_header));
+        is_connected = write_to_socket(cfd, format_server_msg(e_json, event_header, event_body_header));
     }
 
     return;
@@ -188,7 +187,6 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
 /// std::string format_server_board(json board)
 //      wraps the sever board in the API wrapper
 //      will be of form BOARD len=[xxx], body=[board]...
-
 
 std::string format_server_msg(nlohmann::json command, const char* header, const char* body_header) {
     // extract the body into string form

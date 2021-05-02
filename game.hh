@@ -5,6 +5,7 @@
 #include <string>
 #include <tuple>
 #include <vector>
+#include <memory>
 #include <mutex>
 #include <condition_variable>
 #include "nlohmann/json.hpp"
@@ -38,8 +39,8 @@ class Game {
         std::tuple<int, nlohmann::json> create_player(int cfd);
         void move_player(int player_id, int dir);
         
-        // wrapper around changelog API, implementing synchronization
-        Event get_next_event(int p_id);
+        // wrapper around changelog API, implementing synchronization - gets json of next event
+        nlohmann::json get_next_event(int p_id);
         
         // outputting / displaying state
         void print_board(); 

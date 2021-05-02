@@ -29,21 +29,27 @@ class Node {
         nlohmann::json get_json() {
             nlohmann::json j;
             j["index"] = index;
+            j["player_id"] = player_id;
             nlohmann::json adj_json(adj);
             j["adj"] = adj_json;
 
             return j;
+        }
+
+        void from_json(nlohmann::json node_json) {
+            player_id = node_json["player_id"];
+            adj = node_json["adj"].get<std::vector<int>>();
         }
 };
 
 class Board {
     public:
         void init_graph(int w);
-        // Board(Board const&) = delete;
-        //Board& operator=(Board const&) = delete;
+        void init_graph(nlohmann::json board_json);
 
         // update the board state
         int add_player(int player_id);
+        int add_player(int player_id, int loc);
         bool move_player(int player_id, int dir);
 
         // serialize / outputting data
@@ -58,7 +64,6 @@ class Board {
 
         // private helpers / utilites
         int get_loc(int i, int j);
-
 };
 
 #endif

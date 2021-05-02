@@ -10,10 +10,7 @@ class Event {
             modifier = q;
         }
 
-        virtual nlohmann::json get_json() {
-            nlohmann::json j;
-            return j;
-        }
+        virtual nlohmann::json get_json() = 0;
 
         int player_id;
         int modifier;   

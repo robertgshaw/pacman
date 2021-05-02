@@ -9,8 +9,8 @@ using json = nlohmann::json;
  */
 
 // void init_graph(int w):
-//      no CRITICAL SECTION (this is called before threads launched)
 //      inits 2d graph of size w*w, with all edges to adjacent nodes in the graph connected
+//      called on the server side
 
 void Board::init_graph(int w) {
     width = w;
@@ -39,6 +39,40 @@ void Board::init_graph(int w) {
     }
 }
 
+// void init_graph(int w):
+//      inits 2d graph of size w*w, with all edges to adjacent nodes in the graph connected
+//      inserts players into the graph
+//      called on the cleint side
+
+void Board::init_graph(json board_json) {
+    
+    // TDD: invariant that we are passed right API syntax 
+    assert(board_json.find("width") != board_json.end());
+    assert(board_json.find("n_players") != board_json.end());
+    assert(board_json.find("nodes") != board_json.end());
+    
+    // extract width + number of players
+    width = board_json["width"];
+    std::vector<int> vect(board_json["n_players"], -1);
+    p_locations = vect;
+
+    // extract the nodes from the json
+    for(auto it : board_json["nodes"]) {
+        Node nd(it["index"]);
+        nd.from_json(it);
+        if (nd.player_id != -1) {
+            p_locations[nd.player_id] = nd.index;
+        }
+
+        nodes.push_back(nd);
+    }
+
+    // TDD: check that every player was added to the graph
+    for (auto it = p_locations.begin(); it != p_locations.end(); it++) {
+        assert(*it != -1);
+    }
+}
+
 // int add_player(player_id)
 //      adds player_id to the game at random i,j by: 
 //      adds player_id into the node vector
@@ -52,14 +86,34 @@ int Board::add_player(int player_id) {
         ind = get_loc(std::rand() % width, std::rand() % width);
     } while (nodes[ind].player_id != -1);
 
+    return add_player(player_id, ind);
+    // // insert into the nodes tracker
+    // nodes[ind].player_id = player_id;
+
+    // // insert into the p_locations tracker
+    // assert(player_id == p_locations.size());
+    // p_locations.push_back(ind);
+
+    return ind;
+}
+
+// int add_player(player_id, loc)
+//      adds player_id to the game at loc by: 
+//      adds player_id into the node vector
+//      adds player_id into the p_locations vector
+//      returns the location where the player was inserted
+
+int Board::add_player(int player_id, int loc) {
+    assert(nodes[loc].player_id == -1);
+
     // insert into the nodes tracker
-    nodes[ind].player_id = player_id;
+    nodes[loc].player_id = player_id;
 
     // insert into the p_locations tracker
     assert(player_id == p_locations.size());
-    p_locations.push_back(ind);
+    p_locations.push_back(loc);
 
-    return ind;
+    return loc;
 }
 
 // bool move_player(player_id)
@@ -135,12 +189,13 @@ void Board::print() {
     std::cout << str;
 }
 
-// std::string get_board_json() 
-//      returns a string with json representation of the board
+// std::string get_json() 
+//      returns json representation of the board
 
 json Board::get_json() {
     json j;
     j["width"] = width;
+    j["n_players"] = p_locations.size();
     j["nodes"] = json::array();
     
     for (Node& node: nodes) {

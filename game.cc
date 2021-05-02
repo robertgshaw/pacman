@@ -36,13 +36,13 @@ Game::Game(int w) {
 //
 //
 
-// Event get_next_event(int p_id):
+// json get_next_event(int p_id):
 //      Uses condition variable to wait for changelog to have new events in the queue
 //      Once there is a new event in the queue, pop it and pass to the handler
 
-Event Game::get_next_event(int p_id) {
+json Game::get_next_event(int p_id) {
     std::unique_lock<std::mutex> lock(cl_mutex);
-    if (changelog_.is_empty(p_id)) {
+    while (changelog_.is_empty(p_id)) {
         cl_cv.wait(lock);
     }
 
@@ -63,8 +63,8 @@ std::tuple<int, json> Game::create_player(int cfd) {
     std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
 
     // add player to the board + push to the changelog
-    int loc = board_.add_player(n_players);
-    changelog_.push(Add(n_players,loc));
+    int loc = board_.add_player(n_players);    
+    changelog_.push(std::make_unique<Add>(Add(n_players,loc)));
 
     // add the new player as a lister to the changelog
     changelog_.add_listener(n_players);
@@ -95,9 +95,9 @@ void Game::move_player(int player_id, int dir) {
 
     // update state of the game
     if(board_.move_player(player_id, dir)) {
-        
+
         // if move happened, update changelog + notify other threads 
-        changelog_.push(Move(player_id, dir)); 
+        changelog_.push(std::make_unique<Move>(Move(player_id, dir))); 
         lock_cl.unlock();
         cl_cv.notify_all();
     }
