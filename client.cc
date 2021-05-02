@@ -2,9 +2,9 @@
 #include <thread>
 #include "nlohmann/json.hpp"
 
-#include "utilities.hh"
-#include "board.hh"
 #include "client_helpers.hh"
+#include "controller.hh"
+#include "utilities.hh"
 
 using json = nlohmann::json;
 
@@ -27,19 +27,20 @@ int main(int argc , char *argv[]) {
 		return 1;
 	}
 	
-	// initialize the game
+	// TODO: error check the server message  
 	std::cout << "Done." << std::endl << "Initalizing game ...";
-	std::string board_str = parse_message(server_msg, server_board_format, body_format, body_keyword_len);
-	Board board_;
-	board_.init_graph(json::parse(board_str)); // TODO: add error checking on the json	
-	std::cout << "Done. Starting up..." << std::endl << std::endl;
-	board_.print();
+	json board_json = json::parse(parse_message(server_msg, server_board_format, body_format, body_keyword_len));
 
-	// spin off thread to listen to the server
-	std::thread t(handle_changelog, sfd, &board_);
-	t.detach();
+	// Initialize the MVC framework
+	Controller controller_(board_json);
 
-	handle_user(sfd);
+	// Spin up thread to handle changelog messages from server, controller handles events
+	std::thread changelog_t(handle_changelog, sfd, &controller_);
+
+	// Use current thread to handle user commands + send to server
+	handle_user(sfd, &controller_);
+	
+	changelog_t.join();
 	close(sfd);
 	
 	return 0;

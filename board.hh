@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <tuple>
 #include "nlohmann/json.hpp"
 
 #define UP 0
@@ -14,6 +15,11 @@
 struct tuple {
     int n1;
     int n2;
+};
+
+struct locpair {
+    int old_loc;
+    int new_loc;
 };
 
 class Node {
@@ -47,10 +53,14 @@ class Board {
         void init_graph(int w);
         void init_graph(nlohmann::json board_json);
 
+        int get_width();
+        int get_node_player(int i);
+        std::tuple<int,int> get_yx(int loc);
+
         // update the board state
         int add_player(int player_id);
         int add_player(int player_id, int loc);
-        bool move_player(int player_id, int dir);
+        struct locpair move_player(int player_id, int dir);
 
         // serialize / outputting data
         void print();

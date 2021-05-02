@@ -116,13 +116,13 @@ int Board::add_player(int player_id, int loc) {
     return loc;
 }
 
-// bool move_player(player_id)
+// struct locpair move_player(player_id)
 //      moves player from current location updating in:
 //      nodes vector -- updating nodes.player_id
 //      p_locations vector -- updating p_locations[player_id]
-//      returns true if the player made a move
+//      returns a locpair = {old loc, new loc}
 
-bool Board::move_player(int player_id, int dir) {
+struct locpair Board::move_player(int player_id, int dir) {
 
     // invariant that direction is UP (0), RIGHT (1), DOWN (2), or LEFT (3)
     assert(dir < 4);
@@ -155,10 +155,24 @@ bool Board::move_player(int player_id, int dir) {
         // update p_locations vector
         p_locations[player_id] = new_loc;
 
-        return true;    // move successful
+        return {loc, new_loc}; // move successful
     }
 
-    return false;       // move not successful
+    return {loc, loc}; // move not successful
+}
+
+int Board::get_width() {
+    return width;
+}
+
+int Board::get_node_player(int i) {
+    return nodes[i].player_id;
+}
+
+std::tuple<int, int> Board::get_yx(int loc) {
+    int y = loc / width;
+    int x = loc % width;
+    return std::make_tuple(y,x);
 }
 
 /*

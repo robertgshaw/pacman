@@ -93,10 +93,9 @@ void Game::move_player(int player_id, int dir) {
     std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
     std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
 
-    // update state of the game
-    if(board_.move_player(player_id, dir)) {
-
-        // if move happened, update changelog + notify other threads 
+    // try move; if successful, log change in the changelog and alert threads
+    struct locpair lp = board_.move_player(player_id, dir);
+    if(lp.new_loc != lp.old_loc) { 
         changelog_.push(std::make_unique<Move>(Move(player_id, dir))); 
         lock_cl.unlock();
         cl_cv.notify_all();

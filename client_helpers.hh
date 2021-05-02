@@ -6,7 +6,7 @@
 #include "nlohmann/json.hpp"
 
 #include "utilities.hh"
-#include "board.hh"
+#include "controller.hh"
 
 // This file contains code which implements some helpers to handle the APIs
 //      used to communicate between the client and the server
@@ -26,9 +26,9 @@ static const char* body_header =", body=";
 static const int port = 6169;
 static const char* path = "127.0.0.1";
 
-void handle_user(int sfd);
-void handle_changelog(int sfd, Board* b_ptr);
-bool handle_event(nlohmann::json event_json, Board* b_ptr);
+void handle_user(int sfd, Controller* c_ptr);
+void handle_changelog(int sfd, Controller* c_ptr);
+bool handle_event(nlohmann::json event_json, Controller* c_ptr);
 
 // int init socket
 //      wrapper around C socket syscalls
@@ -36,8 +36,8 @@ bool handle_event(nlohmann::json event_json, Board* b_ptr);
 //      returns a sfd (if < 0, there was an error)
 int init_socket();
 
-// std::string format_client request(json request)
+// std::string format_client_move_request(char move);
 //      wraps the client request in the API wrapper
 //      will be of form REQUEST len=xxx, body=abcdef...
 
-std::string format_client_request(nlohmann::json request);
+std::string format_client_move_request(char move);

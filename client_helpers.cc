@@ -5,70 +5,71 @@ using json = nlohmann::json;
 // void handle user(int sfd)
 //		handles
 
-void handle_user(int sfd) {
-	std::string message;	
+void handle_user(int sfd, Controller* c_ptr) { 	
 
-	while (true) {
-		// get message from the command line
-		std::cin >> message;
-		json j;
-		j["move"] = message;
-		std::string msg_to_send = format_client_request(j);
-
-		// send command to the server
-		if (send(sfd, msg_to_send.c_str(), msg_to_send.size(), 0) < 0)	{
+	// get move from the user
+	char key = c_ptr->get_next_move();
+	while (key != 'q') {
+		
+		// format message and send to server
+		std::string msg = format_client_move_request(key);
+		if (send(sfd, msg.c_str(), msg.size(), 0) < 0)	{
 			std::cerr << "Send failed" << std::endl;
 			return;
 		}
+
+		key = c_ptr->get_next_move();
 	}
+
+	return;
 }
 
-// void handle_changelog(int sfd, Board* b_ptr)
+// void handle_changelog(int sfd, Controller* c_ptr)
 //		subscribes to the changelog by reading from the socket
 //		parses the message and sends to the event handler
 //		TODO: update to santize the raw server message
 
-void handle_changelog(int sfd, Board* b_ptr) {
+void handle_changelog(int sfd, Controller* c_ptr) {
 	
 	// loop, listening to the server for changelog updates
 	char server_msg[BUFSIZ];
+
+	// TOOD: update this to have some atomic that user is still connected
 	while(true) {
-		
-		std::cout << std::endl;
 
 		// read the message from the server
-		if (recv(sfd, server_msg, BUFSIZ, 0) < 0) {
-			std::cerr << "Could not get board from server. Shutting down..." << std::endl;
+		// TODO: handle case where socket is already closed
+		if (recv(sfd, server_msg, BUFSIZ, 0) <= 0) { 
+			std::cerr << "ERROR: Read from server." << std::endl;
 			close(sfd);
 			return;
 		}
 		
 		// parse the message from the server and handle the event
+		// TODO: handle bad parse
 		std::string event_str = parse_message(server_msg, server_event_format, body_format, body_keyword_len);
-		if(!handle_event(json::parse(event_str), b_ptr)) {
-			std::cerr << "ERROR: Event invalid. Shutting down..." << std::endl;
-			close(sfd);
+		if(!handle_event(json::parse(event_str), c_ptr)) {
+			std::cerr << "ERROR: Event invalid." << std::endl;
 			return;
 		}
-
-		b_ptr->print();
 	}
 }
 
-// bool handle_event(json event_json, Board* b_ptr)
+// bool handle_event(json event_json, Controller* c_ptr)
 //		handles the events from the raw json format, calling underlying board
 //		currently 2 types of events:
 //			(A) move --- moves the player in the board
 //			(B) add --- adds a new player to the board
 
-bool handle_event(json event_json, Board* b_ptr) {
+bool handle_event(json event_json, Controller* c_ptr) {
+
 	if (event_json.find("move") != event_json.end()) {
-		b_ptr->move_player(event_json["move"]["pid"], event_json["move"]["dir"]);
+		c_ptr->handle_event_move(event_json["move"]["pid"], event_json["move"]["dir"]);
 		return true;
 	} 
 
 	if (event_json.find("add") != event_json.end()) {
-		b_ptr->add_player(event_json["add"]["pid"], event_json["add"]["loc"]);
+		c_ptr->handle_event_add(event_json["add"]["pid"], event_json["add"]["loc"]);
 		return true;
 	}
 
@@ -104,19 +105,22 @@ int init_socket() {
     return sfd;
 }
 
-// std::string format_client request(json request)
+// std::string format_client request(char move)
 //      wraps the client request in the API wrapper
 //      will be of form REQUEST len=xxx, body=abcdef...
 
-std::string format_client_request(nlohmann::json request) {
+std::string format_client_move_request(char move) {
+	json request;	
+	request["move"] = move;
+
     // extract the body into string form
     std::string body_str = request.dump();
 
     // create the message to send
     std::string msg = request_header;               // REQUEST len=
-    msg.append(std::to_string(body_str.size()));    // REQUEST len=xxx
-    msg.append(body_header);                        // REQUEST len=xxx, body=
-    msg.append(body_str);                           // REQUEST len=xxx, body=abcdef...
+    msg.append(std::to_string(body_str.size()));    // REQUEST len=xx
+    msg.append(body_header);                        // REQUEST len=xx, body=
+    msg.append(body_str);                           // REQUEST len=xx, body={"move":move}
 
     return msg;
 }

@@ -1,6 +1,8 @@
 #include "helpers.hh"
 #include "event.hh"
 
+// rename this class server_api.cc (handles the server side of the client server API)
+
 using json = nlohmann::json;
 
 // This file supports server.cc and contains:
@@ -128,33 +130,13 @@ void handle_request(json request, int cfd, int player_id, Game* g_ptr) {
     // check to see if a move command was passed
     if (request.find("move") != request.end()) {
         
-        std::string dir = request["move"];
         // TODO handle typerrors --- should be wrapped in try catch
         // Currently assumes json will be well formed i.e. not an object or something 
-
-        // parse command + send to game API
-        if (dir == "up"){
-            g_ptr->move_player(player_id, UP);
-            response = "MOVE: up";
-        } else if (dir == "down") {
-            g_ptr->move_player(player_id, DOWN);
-            response = "MOVE: down";
-        } else if (dir == "left") {
-            g_ptr->move_player(player_id, LEFT);
-            response = "MOVE: left";
-        } else if (dir == "right") {
-            g_ptr->move_player(player_id, RIGHT);
-            response = "MOVE: right";
-        } else {
-            response = "MOVE: invalid";
+        int dir = request["move"];
+        if (dir == UP || dir == DOWN || dir == LEFT || dir == RIGHT) {
+            g_ptr->move_player(player_id, dir);
         }
-        
-    } else {
-       response = "ERROR: invalid command";
     }
-    
-    // send response to the client
-    //write_to_socket(cfd, response);
     
     // print board out for the time being to observe state
     g_ptr->print_board();
