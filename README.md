@@ -86,20 +86,20 @@ Each client connection is handled by a pair of threads using the Reader/Writer p
             
 ## Running Instructions:
 Navigate to the pacman directory in a terminal
-    Run `make server` to compile the server
-    Run `make client` to compile the client
-    Run `./server.out` to launch the server (opens a socket on the localhost)
+1. Run `make server` to compile the server 
+2. Run `make client` to compile the client
+3. Run `./server.out` to launch the server (opens a socket on the localhost)
 
 Open a new terminal
-    Run `./client.out` --> use awsd to move around the board; q to quit
+1. Run `./client.out` --> use awsd to move around the board; q to quit
 
 Open another terminal
-    Run `./client.out` --> use awsd to move around the board; q to quit
+1. Run `./client.out` --> use awsd to move around the board; q to quit
 
-
+You can connect up to 5 terminals at once 
 You will see that both client terminals are connected to the same server and are updated
 
 ## Docker
 I developed this project on a Windows laptop, using some infrastructure that CS61 at Harvard setup using Docker to launch a Linux OS inside a container. Utimately may plan to move project to an actual containerized enviornment, but the command I use on my laptop is below:
 
-docker run --network="host" -it --rm -v C:\Users\rober\cs61-f20-psets-robertgshaw\pacman:/home/cs61-user/pacman cs61:latest
+`docker run --network="host" -it --rm -v C:\Users\rober\cs61-f20-psets-robertgshaw\pacman:/home/cs61-user/pacman cs61:latest`
