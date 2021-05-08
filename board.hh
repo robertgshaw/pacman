@@ -12,11 +12,6 @@
 #define DOWN 2
 #define LEFT 3
 
-struct tuple {
-    int n1;
-    int n2;
-};
-
 struct locpair {
     int old_loc;
     int new_loc;
@@ -55,12 +50,14 @@ class Board {
 
         int get_width();
         int get_node_player(int i);
+        bool has_quit(int player_id);
         std::tuple<int,int> get_yx(int loc);
 
         // update the board state
         int add_player(int player_id);
         int add_player(int player_id, int loc);
         struct locpair move_player(int player_id, int dir);
+        int delete_player(int player_id);
 
         // serialize / outputting data
         void print();

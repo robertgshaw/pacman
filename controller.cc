@@ -11,6 +11,17 @@ Controller::Controller(json board_json) {
     
     // init view
     view_.init(&board_);
+
+    quit = false;
+}
+
+bool Controller::should_quit() {
+    return quit;
+}
+
+void Controller::set_quit() {
+    quit = true;
+    return;
 }
 
 char Controller::get_next_move() {
@@ -37,6 +48,7 @@ char Controller::get_next_move() {
 //      Handled Events Are:
 //          (a) MOVE: moves a player in a direction
 //          (b) ADD: adds a new player into a loc
+//          (c) QUIT: remoevs a player from loc
 
 void Controller::handle_event_move(int pid, int dir) {
     // update model
@@ -45,7 +57,7 @@ void Controller::handle_event_move(int pid, int dir) {
 
     // update view
     view_.update_cell(lp.old_loc, board_.get_node_player(lp.old_loc));
-    view_.update_cell(lp.new_loc, board_.get_node_player(lp.new_loc));
+    view_.update_cell(lp.new_loc, board_.get_node_player(lp.new_loc));    
 }
 
 void Controller::handle_event_add(int pid, int loc) {
@@ -56,4 +68,13 @@ void Controller::handle_event_add(int pid, int loc) {
 
     // update view
     view_.update_cell(n_loc, pid);
+}
+
+void Controller::handle_event_quit(int pid, int loc) {
+    // update model
+    bool r = board_.delete_player(pid);
+    assert(r);
+    
+    // update view
+    view_.update_cell(loc, -1);
 }

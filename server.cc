@@ -43,16 +43,15 @@ int main(int argc, char** argv) {
         if (cfd < 0) {
 
             // TODO: tell threads that we are dead + that it should shut down
-            
             perror("accept");
             close(cfd);
             close(sfd);
             return 1;
         }
-        
+
         // create player + launch thread to listen to CL + Player Commands
-        std::tie(player_id, board_json) = game_.create_player(cfd);
-        std::thread t(handle_player, cfd, player_id, &game_, board_json);
+        std::tie(player_id, board_json) = game_.handle_add_player(cfd);
+        std::thread t(handle_connection, cfd, player_id, &game_, board_json);
         t.detach();
 
     } 

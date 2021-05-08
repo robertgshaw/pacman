@@ -2,8 +2,6 @@
 #define CONTROLLER_H
 
 #include <string>
-#include <mutex>
-#include <condition_variable>
 #include "nlohmann/json.hpp"
 
 #include "board.hh"
@@ -24,11 +22,17 @@ class Controller {
         // changelog event handlers
         void handle_event_move(int pid, int dir);
         void handle_event_add(int pid, int loc);
+        void handle_event_quit(int pid, int loc);
+
+        bool should_quit();
+        void set_quit();
 
     private:
         // model + view classes
         Board board_;
         View view_;
+    
+        bool quit;
 };
 
 #endif

@@ -47,30 +47,33 @@ static const char* client_body_request_format = "body=";
 static const int client_body_keyword_len = 5; 
 
 
-// void handle_player(cfd, player_id, g_ptr, board_json)
+// void handle_connection(cfd, player_id, g_ptr, board_json)
 //      (1) Initializes client by sending across the board_json as is
 //      (2) Spins up new thread to listen for the changelog (part B of API)
 //      (3) Uses this thread to listen for client commands (part A of API)
 
-void handle_player(int cfd, int player_id, Game* g_ptr, nlohmann::json board_json);
+void handle_connection(int cfd, int player_id, Game* g_ptr, nlohmann::json board_json);
 
 //
 // (1) CLIENT REQUESTS
 //
 
-// void handle_connection(cfd, player_id, g_ptr)
+// void handle_requests(cfd, player_id, g_ptr)
 //      MAIN LOOP EXECUTED BY THE THREAD, handling client requests:
 //          A)  Reads from the socket, looking for client requests,
 //              + handling the commands in the requests
 
-void handle_connection(int cfd, int player_id, Game* g_ptr);
+void handle_requests(int cfd, int player_id, Game* g_ptr);
 
 // handle_request(request) 
 //      IMPLEMENTS INTERFACE BETWEEN CLIENT CONNECTION + BOARD API
 //      Command options include:
-//          A)  "move":"dir" --- dir = up, down, left, right (moves the player on the board)
+//          A)  "move":"dir"    --- moves the player on the board dir = up, down, left, right
+//          B)  "quit":1        --- removes the player from the board           
+//
+//      Returns true if the command was quit to alert caller of need to close down
 
-void handle_request(nlohmann::json request, int cfd, int player_id, Game* g_ptr);
+bool handle_request(nlohmann::json request, int cfd, int player_id, Game* g_ptr);
 
 //
 // (2) CHANGELOG EVENTS

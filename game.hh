@@ -34,17 +34,22 @@
 class Game {
     public:
         Game(int w);
-        
+        int get_board_size();
+
         // wrappers around the board API, implementing synchronization
-        std::tuple<int, nlohmann::json> create_player(int cfd);
-        void move_player(int player_id, int dir);
-        
+        std::tuple<int, nlohmann::json> handle_add_player (int cfd);
+        void handle_request_move(int player_id, int dir);
+        void handle_request_quit(int playe_id);
+        bool has_quit(int player_id);
+
         // wrapper around changelog API, implementing synchronization - gets json of next event
-        nlohmann::json get_next_event(int p_id);
+        nlohmann::json get_next_event(int player_id);
+        bool is_quit_event(int player_id, nlohmann::json e_json);
         
         // outputting / displaying state
         void print_board(); 
         nlohmann::json get_board_json();
+
 
     private:
         int n_players;                  // count of the number of players

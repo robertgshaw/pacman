@@ -38,9 +38,11 @@ int main(int argc , char *argv[]) {
 	std::thread changelog_t(handle_changelog, sfd, &controller_);
 
 	// Use current thread to handle user commands + send to server
-	handle_user(sfd, &controller_);
+	handle_user_input(sfd, &controller_);
 	
+	// Rejoin and close the file descriptors
 	changelog_t.join();
+	shutdown(sfd, SHUT_RDWR);
 	close(sfd);
 	
 	return 0;

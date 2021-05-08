@@ -26,7 +26,7 @@ static const char* body_header =", body=";
 static const int port = 6169;
 static const char* path = "127.0.0.1";
 
-void handle_user(int sfd, Controller* c_ptr);
+void handle_user_input(int sfd, Controller* c_ptr);
 void handle_changelog(int sfd, Controller* c_ptr);
 bool handle_event(nlohmann::json event_json, Controller* c_ptr);
 
@@ -36,8 +36,20 @@ bool handle_event(nlohmann::json event_json, Controller* c_ptr);
 //      returns a sfd (if < 0, there was an error)
 int init_socket();
 
+// std::String add_request_wrapper(std::string body_str)
+//		wrapes the body of the message in the correcet protocol
+//		REQUEST len=xxx body=body_str
+
+std::string add_request_wrapper(std::string body_str);
+
 // std::string format_client_move_request(char move);
 //      wraps the client request in the API wrapper
-//      will be of form REQUEST len=xxx, body=abcdef...
+//      will be of form REQUEST len=xxx, body={"move":move}
 
 std::string format_client_move_request(char move);
+
+// std::string format_client_quit_request();
+//      wraps the client request in the API wrapper
+//      will be of form REQUEST len=xxx, body={"quit":1}
+
+std::string format_client_quit_request();

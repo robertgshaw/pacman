@@ -15,7 +15,8 @@ using json = nlohmann::json;
 //
 //      Data Structure Manipulation (public): update board state / changelog
 //          create_player: adds new player to the board --- creates event
-//          move_player: moves the player in the board --- create event
+//          handle_request_move: moves the player in the board --- create event
+//          handle_request_quit: deletes the player in the board --- creates event
 //          get_next_event: blocks until new event in the CL queue
 //
 
@@ -30,6 +31,11 @@ Game::Game(int w) {
     return;
 }
 
+int Game::get_board_size() {
+    int w = board_.get_width(); 
+    return w * w;
+}
+
 //
 //
 // ********** Data Structure Manipulation ***********
@@ -40,23 +46,41 @@ Game::Game(int w) {
 //      Uses condition variable to wait for changelog to have new events in the queue
 //      Once there is a new event in the queue, pop it and pass to the handler
 
-json Game::get_next_event(int p_id) {
+json Game::get_next_event(int player_id) {
     std::unique_lock<std::mutex> lock(cl_mutex);
-    while (changelog_.is_empty(p_id)) {
+    while (changelog_.is_empty(player_id)) {
         cl_cv.wait(lock);
     }
 
-    return changelog_.pop(p_id);
+    return changelog_.pop(player_id);
 }
 
-// int create_player(int cfd)
+// bool has_quit(int player_id):
+//      Uses condition variable to wait for changelog to have new events in the queue
+//      Once there is a new event in the queue, pop it and pass to the handler
+
+bool Game::has_quit(int player_id) {
+    std::unique_lock<std::mutex> lock(b_mutex);
+
+    return board_.has_quit(player_id);
+}
+
+// bool is_quit_event(int player_id, json e_json):
+//      checks if the event is the player_id quitting the board
+
+bool Game::is_quit_event(int player_id, json e_json) {
+    return Event::is_quit_event(player_id, e_json);
+}
+
+
+// int handle_add_player (int cfd)
 //      CRITCAL SECTION
 //      creates new player and adds to player vector
 //      pushes the player add to the changelog
 //      adds the player as listener to the changelog
 //      returns player_id, board_json
 
-std::tuple<int, json> Game::create_player(int cfd) {
+std::tuple<int, json> Game::handle_add_player(int cfd) {
     // updating both cl / board, need to lock both avoiding deadlock
     std::lock(b_mutex, cl_mutex);
     std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
@@ -82,12 +106,12 @@ std::tuple<int, json> Game::create_player(int cfd) {
     return ret_tuple;
 }
 
-// void move_player(int player_id, int dir)
+// void handle_request_move (int player_id, int dir)
 //      CRITCAL SECTION
 //      moves the player in the share board state
 //      pushes to the change log + notifys the cv
 
-void Game::move_player(int player_id, int dir) {
+void Game::handle_request_move(int player_id, int dir) {
     // updating both cl / board, need to lock both avoiding deadlock
     std::lock(b_mutex, cl_mutex);
     std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
@@ -97,6 +121,28 @@ void Game::move_player(int player_id, int dir) {
     struct locpair lp = board_.move_player(player_id, dir);
     if(lp.new_loc != lp.old_loc) { 
         changelog_.push(std::make_unique<Move>(Move(player_id, dir))); 
+        lock_cl.unlock();
+        cl_cv.notify_all();
+    }
+
+    return;
+}
+
+// void handle_request_quit (int player_i)
+//      CRITICAL SECTION
+//      deletes the player from the share board state
+//      pushes to the change log + onotifys the cv
+
+void Game::handle_request_quit(int player_id) {
+    // updating both cl / board, need to lock both avoiding deadlock
+    std::lock(b_mutex, cl_mutex);
+    std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
+    std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
+
+    // try delete; if successful, log the chnage in the changelog and alter threads
+    int loc = board_.delete_player(player_id);
+    if(loc != -1) {
+        changelog_.push(std::make_unique<Quit>(Quit(player_id, loc)));
         lock_cl.unlock();
         cl_cv.notify_all();
     }

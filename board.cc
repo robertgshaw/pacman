@@ -66,11 +66,6 @@ void Board::init_graph(json board_json) {
 
         nodes.push_back(nd);
     }
-
-    // TDD: check that every player was added to the graph
-    for (auto it = p_locations.begin(); it != p_locations.end(); it++) {
-        assert(*it != -1);
-    }
 }
 
 // int add_player(player_id)
@@ -87,14 +82,6 @@ int Board::add_player(int player_id) {
     } while (nodes[ind].player_id != -1);
 
     return add_player(player_id, ind);
-    // // insert into the nodes tracker
-    // nodes[ind].player_id = player_id;
-
-    // // insert into the p_locations tracker
-    // assert(player_id == p_locations.size());
-    // p_locations.push_back(ind);
-
-    return ind;
 }
 
 // int add_player(player_id, loc)
@@ -126,9 +113,9 @@ struct locpair Board::move_player(int player_id, int dir) {
 
     // invariant that direction is UP (0), RIGHT (1), DOWN (2), or LEFT (3)
     assert(dir < 4);
-    
+
     // invariant that the player_id passed is an actual player
-    assert(player_id < p_locations.size());
+    assert(player_id < p_locations.size() && p_locations[player_id] != -1);
 
     // get current loc of the plaer
     int loc = p_locations[player_id];
@@ -155,10 +142,39 @@ struct locpair Board::move_player(int player_id, int dir) {
         // update p_locations vector
         p_locations[player_id] = new_loc;
 
-        return {loc, new_loc}; // move successful
+        return {loc, new_loc};  // move successful
     }
 
-    return {loc, loc}; // move not successful
+    return {loc, loc};          // move not successful
+}
+
+// int delete_player(player_id)
+//      deletes player from current location updating in:
+//      nodes vector -- updating nodes[loc].player_id = -1
+//      p_locations vector -- updating p_locations[player_id] = -1
+//      returns location of the deleted player if deleted or -1 if not in the game 
+
+int Board::delete_player(int player_id) {
+
+    // if p_id invalid or player already deleted, return -1
+    if (player_id >= p_locations.size() || p_locations[player_id] == -1) {
+        return -1;
+
+    // otherwise, delete + return the deleted location
+    } else {
+        int loc = p_locations[player_id];
+        nodes[loc].player_id = -1;
+        p_locations[player_id] = -1;
+        return loc;
+    }
+}
+
+// bool has_quit(int player_id)
+//      returns true if player is no longer active in the game
+//      uses the p_locations vector to do so
+
+bool Board::has_quit(int player_id) {
+    return p_locations[player_id] == -1;
 }
 
 int Board::get_width() {
