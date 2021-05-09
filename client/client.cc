@@ -1,5 +1,8 @@
 #include <iostream>
 #include <thread>
+#include <string>
+#include <tuple>
+#include <cassert>
 #include "../shared/nlohmann/json.hpp"
 
 #include "client_api.hh"
@@ -17,27 +20,37 @@ int main(int argc , char *argv[]) {
 		return 1;
 	}
 
-	std::cout << "Welcome to pacman." << std::endl << std::endl << "Connecting to server...";
-
 	// get the board from the game	
 	char server_msg[BUFSIZ];
-	if (recv(sfd, server_msg, BUFSIZ, 0) < 0) {
+	std::string start_str;
+	int n_left;
+
+	// get the board from the server, reading BUFSIZ at a time
+	int n_read = recv(sfd, server_msg, BUFSIZ, 0); 
+	if (n_read < 0) {
 		std::cerr << " Shutting down..." << std::endl;
 		close(sfd);
 		return 1;
 	}
-	
-	// TODO: error check the server message  
-	std::cout << "Done." << std::endl << "Initalizing game ...";
-	json board_json = json::parse(parse_message(server_msg, server_board_format, body_format, body_keyword_len));
+	std::tie(start_str, n_left) = parse_message(server_msg, server_start_format, body_format, body_keyword_len);
+	while (n_left != 0) {
+		assert(n_left > 0);
+		n_read = recv(sfd, server_msg, std::min(BUFSIZ, n_left), 0);
+
+		start_str.append(server_msg, n_read);
+		n_left -= n_read;
+	}
+
+	// convert to json to extract data
+	json start_json = json::parse(start_str);
 
 	// Initialize the MVC framework
-	Controller controller_(board_json);
+	Controller controller_(start_json["board"], start_json["pid"]);
 
-	// Spin up thread to handle changelog messages from server, controller handles events
+	// READER THREAD: handle changelog messages from server, controller handles events
 	std::thread changelog_t(handle_changelog, sfd, &controller_);
 
-	// Use current thread to handle user commands + send to server
+	// WRITER THREAD: handle user requests + send to server
 	handle_user_input(sfd, &controller_);
 	
 	// Rejoin and close the file descriptors

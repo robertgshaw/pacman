@@ -38,9 +38,13 @@ using json = nlohmann::json;
 //          (4) Rejoins together and frees the OS resources
 
 void handle_connection(int cfd, int player_id, Game* g_ptr, json board_json) {
-    
+    // create start json
+    json start_json;
+    start_json["pid"] = player_id;
+    start_json["board"] = board_json;
+
     // (1) send initial board to the socket
-    if (!write_to_socket(cfd, format_server_msg(board_json, board_header, board_body_header))) {
+    if (!write_to_socket(cfd, format_server_msg(start_json, start_header, start_body_header))) {
         std::cerr << "Failed to send board for p_id:" << std::to_string(player_id) << std::endl;
         close(cfd);
         return;

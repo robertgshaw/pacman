@@ -1,5 +1,4 @@
 #include "client_api.hh"
-#include <cstdio>
 
 using json = nlohmann::json;
 
@@ -75,7 +74,9 @@ void handle_changelog(int sfd, Controller* c_ptr) {
 		
 		// parse the message from the server and handle the event
 		// TODO: handle bad parse
-		std::string event_str = parse_message(server_msg, server_event_format, body_format, body_keyword_len);
+		std::string event_str;
+		int n_left;
+		std::tie(event_str, n_left) = parse_message(server_msg, server_event_format, body_format, body_keyword_len);
 		if(!handle_event(json::parse(event_str), c_ptr)) {
 			c_ptr->set_quit(); 
 			std::cerr << "ERROR: Event invalid." << std::endl;

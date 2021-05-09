@@ -11,8 +11,8 @@
 // This file contains code which implements some helpers to handle the APIs
 //      used to communicate between the client and the server
 
-static const char* server_board_format = "BOARD len=%d, body%c";
-static const char* board_header = "BOARD len=";
+static const char* server_start_format = "START len=%d, body%c";
+static const char* start_header = "START len=";
 
 static const char* server_event_format = "EVENT len=%d, body%c";
 static const char* event_header = "EVENT len=";

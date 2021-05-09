@@ -95,7 +95,7 @@ std::tuple<int, json> Game::handle_add_player(int cfd) {
 
     // increment player ctr
     n_players++;
-
+    
     // return the p_id and current board state
     std::tuple<int, json> ret_tuple = std::make_tuple(n_players - 1, board_.get_json());
 
