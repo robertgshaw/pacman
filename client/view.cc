@@ -9,6 +9,7 @@ View::~View() {
 }
 
 bool View::init(Board* b_ptr, int pid) {
+    log_fp = fopen("log.txt", "w");
 
     // setup constants that will define the UI
     board_w = b_ptr->get_width();
@@ -45,10 +46,11 @@ bool View::init(Board* b_ptr, int pid) {
         std::tie(start_y, start_x) = convert_yx(y, x);
         
         // create cell, printing to the screen
-        Cell cell_(player_id, start_y, start_x, cell_h, cell_w, player_id == c_pid, b_ptr->get_node_type(i));
+        Cell cell_(player_id, start_y, start_x, cell_h, cell_w, player_id == c_pid, b_ptr->get_node_type(i), log_fp);
         cells.push_back(cell_);
-    }
 
+    }
+    fprintf(log_fp, "done print board! \n\n\n\n\n");
     return true;
 }
 
@@ -63,6 +65,7 @@ void View::destroy_board() {
 }
 
 void View::update_cell(int ind, int p_id) {
+    fprintf(log_fp, "Updating ind = %d with p_id = %d\n", ind, p_id);
     cells[ind].update(p_id, p_id == c_pid);
 }
 

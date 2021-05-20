@@ -1,6 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
+#include <cstdio>
 #include <string>
 #include "../shared/nlohmann/json.hpp"
 
@@ -28,6 +29,8 @@ class Controller {
         void set_quit();
 
     private:
+        FILE* log_fp;
+
         // model + view classes
         Board board_;
         View view_;

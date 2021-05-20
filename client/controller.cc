@@ -8,6 +8,8 @@ using json = nlohmann::json;
 //          initializing view (view)
 
 Controller::Controller(json board_json, int pid) : player_id(pid), quit(false) {
+    
+    log_fp = fopen("log.txt", "a+");
 
     // init model (TODO: add error checking on the json)
 	board_.init_graph(board_json); 
@@ -58,7 +60,7 @@ void Controller::handle_event_move(int pid, int dir) {
 
     // update view
     view_.update_cell(lp.old_loc, board_.get_node_player(lp.old_loc));
-    view_.update_cell(lp.new_loc, board_.get_node_player(lp.new_loc));    
+    view_.update_cell(lp.new_loc, board_.get_node_player(lp.new_loc));
 }
 
 void Controller::handle_event_add(int pid, int loc) {

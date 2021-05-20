@@ -3,7 +3,7 @@ client_objects = client.o client_api.o controller.o view.o
 shared_objects = board.o utilities.o
 
 # commands
-add: server client
+all: server client
 
 server: $(server_objects)
 	g++ -o server.out $(server_objects) -pthread

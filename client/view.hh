@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdio>
 #include <tuple>
 #include <ncurses.h>
 
@@ -12,8 +13,8 @@ struct point {
 // UI version of a node on the board graph
 class Cell {
     public:
-        Cell(int p_id, int y, int x, int c_h, int c_w, bool a, nodetype t) :
-            player_id{p_id}, screen_y{y}, screen_x{x}, cell_h{c_h}, cell_w{c_w}, active{a}, type{t} {
+        Cell(int p_id, int y, int x, int c_h, int c_w, bool a, nodetype t, FILE* f) :
+            player_id{p_id}, screen_y{y}, screen_x{x}, cell_h{c_h}, cell_w{c_w}, active{a}, type{t}, log_fd{f} {
             
             w_ptr = newwin(cell_h, cell_w, screen_y, screen_x);
             active ? highlight() : draw();
@@ -31,16 +32,12 @@ class Cell {
             delwin(w_ptr);
         }
 
-        void draw() {            
+        void draw() {
+            if (type == blocked) {
+                box(w_ptr, 0, 0);
+            }
             struct point xy = get_center();
             mvwprintw(w_ptr, xy.y, xy.x, get_icon());
-            
-            if (type == blocked) {
-                wborder(w_ptr, ACS_LEQUAL, ' ', ' ', ' ', ' ', ' ', ' ', ' ');
-                // wborder(w_ptr, 0, 0, 0, 0, 0, 0, 0, 0);
-            } else {
-                wborder(w_ptr, ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ');
-            }
             wrefresh(w_ptr);
         }
 
@@ -59,6 +56,7 @@ class Cell {
         int screen_y;
         int cell_w;
         int cell_h;
+        FILE* log_fd;
         
         struct point get_center() {
             return {cell_w / 2, cell_h / 2};
@@ -67,7 +65,7 @@ class Cell {
         const char* get_icon() {
             std::string str;
             if (player_id == -1) {
-                str = type == blocked ? "X" : "";
+                str = type == blocked ? "" : " ";
             } else {
                 assert(type == open);
                 str = std::to_string(player_id);
@@ -85,6 +83,8 @@ class View {
         ~View();
         
     private: 
+        FILE* log_fp;
+
         int board_w;
         int board_h;
         int cell_w;
