@@ -1,6 +1,7 @@
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 
+#include <cstdio>
 #include <string>
 #include "../shared/nlohmann/json.hpp"
 
@@ -14,7 +15,7 @@
 
 class Controller {
     public:
-        Controller(nlohmann::json board_json);
+        Controller(nlohmann::json board_json, int pid);
         
         // user event handler
         char get_next_move();
@@ -28,9 +29,14 @@ class Controller {
         void set_quit();
 
     private:
+        FILE* log_fp;
+
         // model + view classes
         Board board_;
         View view_;
+
+        // id of the player on this client
+        int player_id; 
     
         bool quit;
 };

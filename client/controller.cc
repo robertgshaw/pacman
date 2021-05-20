@@ -2,27 +2,30 @@
 
 using json = nlohmann::json;
 
-Controller::Controller(json board_json) {
+// CONSTRUCTOR
+//      sets up the MVC framwork by:
+//          initializing board (model)
+//          initializing view (view)
 
-    // TODO: add error checking on the json	
+Controller::Controller(json board_json, int pid) : player_id(pid), quit(false) {
+    
+    log_fp = fopen("log.txt", "a+");
 
-    // init model
+    // init model (TODO: add error checking on the json)
 	board_.init_graph(board_json); 
     
     // init view
-    view_.init(&board_);
-
-    quit = false;
+    view_.init(&board_, pid);
 }
 
-bool Controller::should_quit() {
-    return quit;
-}
-
-void Controller::set_quit() {
-    quit = true;
-    return;
-}
+// UI HANDLERS
+//      called from the ui listener thread to handle requests from the user
+//      parse the command and converts to an event
+//          "a" = left 
+//          "w" = up 
+//          "d" = right
+//          "s" = down
+//          "q" = quit
 
 char Controller::get_next_move() {
     char key = view_.get_user_input();
@@ -43,7 +46,7 @@ char Controller::get_next_move() {
 }
 
 // EVENT HANDLERS
-//      called from changelog listener to handle events from the server
+//      called from changelog listener thread to handle events from the server
 //      updates the model (board_) and the view (view_) for each event
 //      Handled Events Are:
 //          (a) MOVE: moves a player in a direction
@@ -57,7 +60,7 @@ void Controller::handle_event_move(int pid, int dir) {
 
     // update view
     view_.update_cell(lp.old_loc, board_.get_node_player(lp.old_loc));
-    view_.update_cell(lp.new_loc, board_.get_node_player(lp.new_loc));    
+    view_.update_cell(lp.new_loc, board_.get_node_player(lp.new_loc));
 }
 
 void Controller::handle_event_add(int pid, int loc) {
@@ -77,4 +80,17 @@ void Controller::handle_event_quit(int pid, int loc) {
     
     // update view
     view_.update_cell(loc, -1);
+}
+
+
+// QUIT STATE
+//      gets and sets the "quit" state
+
+bool Controller::should_quit() {
+    return quit;
+}
+
+void Controller::set_quit() {
+    quit = true;
+    return;
 }

@@ -38,8 +38,8 @@
 // constants that define the server to client API
 static const char* event_header = "EVENT len=";
 static const char* event_body_header =", body=";
-static const char* board_header = "BOARD len=";
-static const char* board_body_header =", body=";
+static const char* start_header = "START len=";
+static const char* start_body_header =", body=";
 
 // constants that define the client to server API
 static const char* client_request_format = "REQUEST len=%d, body%c";

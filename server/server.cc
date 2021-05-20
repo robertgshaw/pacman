@@ -11,8 +11,8 @@
 #include "game.hh"
 
 static const int port = 6169;
-static const int board_size = 4;
-static const int max_players =  5;
+static const int board_size = 21;
+static const int max_players = 5;
 
 using json = nlohmann::json;
 
