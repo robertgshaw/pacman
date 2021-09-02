@@ -5,8 +5,10 @@ Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows
     Demonstrate competancy with C++ patterns and std
     Demonstrate competancy with concurrent programming (threads, mutexes, cvs)
     Demonstrate familiarity with basic systems / networking concepts 
+    Demonstrate competancy with AWS
+    Demonstrate competancy with Docker + Containers
+    Demonstrate competancy with basic web app design
     Demonstrate competancy with object oriented programming and polymorphism
-        NOTE: C++ is terrible for polymorphism
 
 ## Current status:
     The project currently allows multiple users to simultaneously connect to the server and move around a "Board". 
@@ -15,11 +17,15 @@ Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows
     The player moves around the board by clicking "awsd" and "q" to quit. 
     The server currently runs on the localhost.
 
+## Immediate Next Steps
+    1) Dockerize the server side application
+    2) Put server onto AWS + enable access over open internet (vs today via) - starting with EC2 to learn
+    3) Potentially, play around with ECS / EKS
+
 ## Longer Term Goals:
-    1) Build pacman features into the game
-    2) Allow server to hold multiple simultaneous games
-    3) Put Server onto AWS and actually run over the internet (vs localhost) 
-    4) Move the Client Side code into a browser
+    1) Put client side code into the browser w/ a GUI (vs command line today)
+    2) Build more robust pacman features into the game
+    3) Allow server to hold multiple simultaneous games
 
 ## Project Design
 ### Server:
@@ -84,7 +90,7 @@ Each client connection is handled by a pair of threads using the Reader/Writer p
         "Reader Thread" --> this thread listens to the socket for events; as events come in; the board is updated + the 
             controller passes changes to the board to the view 
             
-## Running Instructions:
+## Running Instructions (Main Branch):
 Navigate to the pacman directory in a terminal
 1. Run `make server` to compile the server 
 2. Run `make client` to compile the client
@@ -98,8 +104,3 @@ Open another terminal
 
 You can connect up to 5 terminals at once 
 You will see that both client terminals are connected to the same server and are updated
-
-## Docker
-I developed this project on a Windows laptop, using some infrastructure that CS61 at Harvard setup using Docker to launch a Linux OS inside a container. Utimately may plan to move project to an actual containerized enviornment, but the command I use on my laptop is below:
-
-`docker run --network="host" -it --rm -v C:\Users\rober\cs61-f20-psets-robertgshaw\pacman:/home/cs61-user/pacman cs61:latest`
