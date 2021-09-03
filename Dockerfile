@@ -15,4 +15,6 @@ FROM debian:stable-slim
 
 COPY --from=builder /app/server.out .
 
+EXPOSE 6169
+
 CMD ["./server.out"]

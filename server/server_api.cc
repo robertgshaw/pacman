@@ -60,7 +60,7 @@ void handle_connection(int cfd, int player_id, Game* g_ptr, json board_json) {
     t.join();
     shutdown(cfd, SHUT_RDWR);
     if(close(cfd) < 0) {
-        std::cout << "cLose failed" << std::endl;
+        std::cerr << "cLose failed" << std::endl;
     }
 
     return;
@@ -86,13 +86,13 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
     char equals_sign;
     std::string request;
 
-    g_ptr->print_board();
-    std::cout << std::endl;
+    // g_ptr->print_board();
+    // std::cout << std::endl;
    
     // read the client request from the file
     //      skip_get == true when we know there is already a well formed header already in buf
     while (skip_get || recv(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf), 0) > 0) {    
-
+        
         // parse the request of form REQUEST len=XXX, body=YYY      
         if (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=') {
             
@@ -114,10 +114,18 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
                 
                 // move the buffer pointer over to the start of the next request, update skip flag
                 buf_ptr += body_start_ind + len;
+                std::cout << "buf ptr before skip_get = " << buf_ptr << std::endl;
                 skip_get = (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=');
+
+                // reset the buf ptr back to the start of the buffer    
+                if (!skip_get) {
+                    memset(buf, '\0', BUFSIZ); // clears out memory
+                    buf_ptr = buf;
+                }
 
             // IF (buffer did not contain the entire request), read until we have the whole thing
             } else {
+                std::cout << "here" << std::endl;
                 buf_ptr = buf;
                 skip_get = false;
                 while (request.size() < len) {
@@ -139,6 +147,8 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
         // IF the request does not conform to the API, return some type of error
         } else {
             // TODO: return some type of error
+            std::cout << "ERROR!" << std::endl;
+            return;
         }
     }
 
@@ -153,6 +163,8 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
 
 bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
 
+    std::cout << request.dump() << std::endl;
+    
     std::string response;
     bool is_quit = false;
 
@@ -173,8 +185,8 @@ bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
 	}
     
     // print board out for the time being to observe state
-    g_ptr->print_board();
-    std::cout << std::endl;
+    // g_ptr->print_board();
+    // std::cout << std::endl;
 
     return is_quit;
 }

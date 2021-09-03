@@ -13,6 +13,8 @@ using json = nlohmann::json;
 
 int main(int argc , char *argv[]) {
 
+	std::cout << path << std::endl;
+
 	// init and connect to socket
 	int sfd = init_socket(); 
     if (sfd == -1) {
