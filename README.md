@@ -1,12 +1,21 @@
 # Pacman: multiplayer version of pacman
 Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows.
 
+## Running the server:
+    Uses docker to build application.
+    1. Run `docker image build -t server-p .` to build the server
+    2. Run `docker run -p 6169:6169 server-p` to start the server
+
+    I have not yet build a way to terminate the server program + cleanup, so you will have to manually quit with "Ctrl-C"
+    You will need to manually stop the docker container to reopen the 6169 port, since force quitting does not stop the process.
+    As such, type `docker container ls`, which will give you the list of running containers. Note the ID of the server-p container
+    Type `docker container stop [ID]` to stop the container
+
 ## Project goal:
     Demonstrate competancy with C++ patterns and std
     Demonstrate competancy with concurrent programming (threads, mutexes, cvs)
     Demonstrate familiarity with basic systems / networking concepts 
     Demonstrate competancy with object oriented programming and polymorphism
-        NOTE: C++ is terrible for polymorphism
 
 ## Current status:
     The project currently allows multiple users to simultaneously connect to the server and move around a "Board". 

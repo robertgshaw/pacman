@@ -24,10 +24,6 @@ static const int body_keyword_len = 5;
 static const char* body_format = "body=";
 static const char* body_header =", body=";
 
-static const int port = 6169;
-// static const char* path = "18.222.48.92";
-static const char* path = "127.0.0.1";
-
 void handle_user_input(int sfd, Controller* c_ptr);
 void handle_changelog(int sfd, Controller* c_ptr);
 bool handle_event(nlohmann::json event_json, Controller* c_ptr);

@@ -114,7 +114,6 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
                 
                 // move the buffer pointer over to the start of the next request, update skip flag
                 buf_ptr += body_start_ind + len;
-                std::cout << "buf ptr before skip_get = " << buf_ptr << std::endl;
                 skip_get = (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=');
 
                 // reset the buf ptr back to the start of the buffer    
@@ -125,7 +124,6 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
 
             // IF (buffer did not contain the entire request), read until we have the whole thing
             } else {
-                std::cout << "here" << std::endl;
                 buf_ptr = buf;
                 skip_get = false;
                 while (request.size() < len) {
@@ -162,8 +160,6 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
 //          2)  "quit":1     ---> 1 = value for protocol consistency (removes the player from the board) 
 
 bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
-
-    std::cout << request.dump() << std::endl;
     
     std::string response;
     bool is_quit = false;

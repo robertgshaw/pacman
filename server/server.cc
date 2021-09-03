@@ -52,9 +52,8 @@ int main(int argc, char** argv) {
 
         // create player + launch thread to listen to CL + Player Commands
         std::tie(player_id, board_json) = game_.handle_add_player(cfd);
-        std::thread t(handle_connection, cfd, player_id, &game_, board_json);
-        t.detach();
-
+        std::thread conn_t(handle_connection, cfd, player_id, &game_, board_json);
+        conn_t.detach();
     } 
 
     close(sfd);

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdlib>
 #include <thread>
 #include <string>
 #include <tuple>
@@ -12,8 +13,17 @@
 using json = nlohmann::json;
 
 int main(int argc , char *argv[]) {
+	
+	int port;
+	char* path;
 
-	std::cout << path << std::endl;
+	if (argc != 3) {
+		std::cout << "usage: ./client [server-ip] [port]" << std::endl;
+		return 0;
+	} else {
+		path = argv[1];
+		port = atoi(argv[2]);
+	}
 
 	// init and connect to socket
 	int sfd = init_socket(); 
