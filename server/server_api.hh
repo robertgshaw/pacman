@@ -1,5 +1,5 @@
-#ifndef HELPERS_H
-#define HELPERS_H
+#ifndef SERVER_API_H
+#define SERVER_API_H
 
 #include <iostream>
 #include <memory>
@@ -10,13 +10,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/time.h> // FD_SET, FD_ISSET, FD_ZERO macros
 #include "../shared/nlohmann/json.hpp"
 
 #include "game.hh"
+#include "exitpipe.hh"
 
-// This file contains code which implements the API communicated across the socket
+// This file contains code which implements the API communicated across the network
 //      as well as some basic wrappers around SYSCALL utilities 
-//  
 
 //
 //
@@ -46,24 +47,25 @@ static const char* client_request_format = "REQUEST len=%d, body%c";
 static const char* client_body_request_format = "body=";
 static const int client_body_keyword_len = 5; 
 
-
-// void handle_connection(cfd, player_id, g_ptr, board_json)
+// void handle_connection(cfd, exit_pipe_cfd, player_id, g_ptr, board_json)
 //      (1) Initializes client by sending across the board_json as is
 //      (2) Spins up new thread to listen for the changelog (part B of API)
 //      (3) Uses this thread to listen for client commands (part A of API)
 
-void handle_connection(int cfd, int player_id, Game* g_ptr, nlohmann::json board_json);
+void handle_connection(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr, nlohmann::json board_json);
 
 //
 // (1) CLIENT REQUESTS
 //
 
-// void handle_requests(cfd, player_id, g_ptr)
+// void handle_requests(cfd, exit_pipe_cfd, player_id, g_ptr)
 //      MAIN LOOP EXECUTED BY THE THREAD, handling client requests:
-//          A)  Reads from the socket, looking for client requests,
-//              + handling the commands in the requests
+//          (A) Blocks on client socket and on exit_pipe_cfd, reading + processing, until:
+//              (1) there is a signal from the exit_pipe, telling us to shutdown
+//              (2) there is a quit request sent by the client
+//              (3) some type of error occurs with the socket
 
-void handle_requests(int cfd, int player_id, Game* g_ptr);
+void handle_requests(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr);
 
 // handle_request(request) 
 //      IMPLEMENTS INTERFACE BETWEEN CLIENT CONNECTION + BOARD API

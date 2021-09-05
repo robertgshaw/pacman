@@ -35,9 +35,10 @@ using json = nlohmann::json;
 //          (1) Initializes client by sending across the board_json as is
 //          (2) Spins up new thread to listen for the changelog (part B of API)
 //          (3) Uses this thread to listen for client commands (part A of API)
-//          (4) Rejoins together and frees the OS resources
+//          (4) Rejoins together and frees the Os resources
 
-void handle_connection(int cfd, int player_id, Game* g_ptr, json board_json) {
+void handle_connection(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr, json board_json) {
+
     // create start json
     json start_json;
     start_json["pid"] = player_id;
@@ -50,49 +51,95 @@ void handle_connection(int cfd, int player_id, Game* g_ptr, json board_json) {
         return;
     }
 
-    // (2) spin up thread to listen to changelog - writes changes to socket
+    // (2) spin up thread to listen to changelog - writer to socket
     std::thread t(handle_changelog, cfd, player_id, g_ptr);
     
     // (3) use this thread to listen to for user commands - reader from socket
-    handle_requests(cfd, player_id, g_ptr);
+    handle_requests(cfd, exit_pipe_cfd, player_id, g_ptr);
     
     // (4) join together and free underlying resources
     t.join();
     shutdown(cfd, SHUT_RDWR);
     if(close(cfd) < 0) {
-        std::cerr << "cLose failed" << std::endl;
+        std::cerr << "Close failed for player_id:" << std::to_string(player_id) << " on cfd:" << std::to_string(cfd) << std::endl;
+    }
+    
+    if (close(exit_pipe_cfd) < 0) {
+        std::cerr << "Closed failed for player_id: " << std::to_string(player_id) << "on exit pipe reader cfd: " << exit_pipe_cfd << std::endl;
     }
 
     return;
-
 }
 
 
 // (A) CLIENT REQUESTS
 
-// void handle_requests(cfd, player_id, g_ptr)
+// read_from_socket(cfd, buf_ptr, sz):
+//      reads from socket, blocking
+//      returns true if there is text to read from buf_ptr
+//      returns false if there is none (i.e. socket connection closed)
+
+bool read_from_socket(int cfd, char* buf_ptr, int sz) {
+    // read from socket
+    int r = recv(cfd, buf_ptr, sz, 0);
+    
+    // if error reading from socket, print error and return
+    if (r < 0) {
+        std::cerr << "Error: bad reading from socket " << std::to_string(cfd) << std::endl;
+    }
+    
+    return r > 0;
+}
+
+// void handle_requests(cfd, exit_pipe_cfd, player_id, g_ptr)
 //      MAIN LOOP EXECUTED BY THE THREAD, handling client requests:
-//          1)  Reads from the socket, looking for client requests,
-//              + handling the commands in the requests
+//      Blocks on client socket and on exit_pipe_cfd
+//      Reads + processes requests, publishing to the changelog until:
+//          (1) there is a signal from the exit_pipe, telling us to shutdown
+//          (2) there is a quit request sent by the client
+//          (3) some type of error occurs with the socket
 
-void handle_requests(int cfd, int player_id, Game* g_ptr) {
+void handle_requests(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr) {
 
+    // setup variables to read from the socket
     char buf[BUFSIZ];
-    memset(buf, '\0', BUFSIZ); // clears out memory
+    memset(buf, '\0', BUFSIZ);
     char* buf_ptr = buf;
     int len, nread, body_start_ind, body_len_in_buf;
     bool skip_get = false;
-    bool is_quit;
     char equals_sign;
     std::string request;
-
-    // g_ptr->print_board();
-    // std::cout << std::endl;
    
-    // read the client request from the file
+    // setup file descriptors for SELECT
+    fd_set readfds;
+    FD_ZERO(&readfds);
+    FD_SET(exit_pipe_cfd, &readfds);    // add exit signal pipe
+    FD_SET(cfd, &readfds);              // add the socket
+    int max_fd = cfd > exit_pipe_cfd ? cfd : exit_pipe_cfd;
+
+    // read the client request from the socket
     //      skip_get == true when we know there is already a well formed header already in buf
-    while (skip_get || recv(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf), 0) > 0) {    
+    while (skip_get || select(max_fd + 1 , &readfds , NULL , NULL , NULL) > 0) {    
         
+        // if there was not skip, then select unblocked
+        if (!skip_get) {
+
+            // if we got a signal in the exit_pipe_cfd, then publish an exit request to changelog and exit
+            if (FD_ISSET(exit_pipe_cfd, &readfds)) {
+               
+                // publish exit_request
+                json exit_request = { { "exit", 1 } };
+                handle_request(exit_request, cfd, player_id, g_ptr);
+                return;
+            } 
+
+            // otherwise, we can read from the socket; exit if there is nothing to read
+            assert(FD_ISSET(cfd, &readfds));
+            if (!read_from_socket(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf))) {
+                return;
+            }
+        }
+
         // parse the request of form REQUEST len=XXX, body=YYY      
         if (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=') {
             
@@ -103,11 +150,11 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
             body_len_in_buf = std::min(len, nread - body_start_ind);
             request = request.substr(body_start_ind, body_len_in_buf);
 
-            // IF (buffer contained entire request), handle request + loop back to handle next request
+            // IF buffer contained entire request, handle request + loop back to handle next request
             if (len == body_len_in_buf) {
                 
                 // handle the json request; if true, then the request was to quit 
-                // as such, return from this function and go back to the client connection thread to clean up the cfd
+                // as such, exit from this function and go back to the client connection 
                 if (handle_request(json::parse(request), cfd, player_id, g_ptr)) {
                     return;
                 }
@@ -122,35 +169,22 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
                     buf_ptr = buf;
                 }
 
-            // IF (buffer did not contain the entire request), read until we have the whole thing
+            // IF buffer did not contain the entire request, exit (TODO: do something better here)
             } else {
-                buf_ptr = buf;
-                skip_get = false;
-                while (request.size() < len) {
-                    // read from the stream, handling errors
-                    int sz = len - request.size() < BUFSIZ ? len - request.size() : BUFSIZ;
-                    if (recv(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf), 0) < 0) {
-                        close(cfd);
-                        return;
-                    } 
-                    request += buf_ptr;   
-                    
-                    // TDD: if we read less than the buffer size, we must be done
-                    if (strlen(buf_ptr) < BUFSIZ) {
-                        assert(request.size() == len);
-                    }
-                }
+                std::cerr << "Error: buffer could not fit the entire request for client " << std::to_string(player_id) << std::endl;
+                return;
             }
 
-        // IF the request does not conform to the API, return some type of error
+        // IF the request does not conform to the API, exit (TODO: do something better here)
         } else {
-            // TODO: return some type of error
-            std::cout << "ERROR!" << std::endl;
+            std::cerr << "Error: request does not conform to the API for client " << std::to_string(player_id) << std::endl;
             return;
         }
     }
 
-    close(cfd);
+    // exit if there was some error with select
+    std::cerr << "Error: select call " << "returned -1 (error) on client " << std::to_string(player_id)  << std::endl; 
+    return; 
 }
 
 // void handle_request(request, cfd, player_id, g_ptr) 
@@ -161,7 +195,8 @@ void handle_requests(int cfd, int player_id, Game* g_ptr) {
 
 bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
     
-    std::string response;
+    std::cout << request.dump() << std::endl;
+
     bool is_quit = false;
 
     // (1) handle move
@@ -175,15 +210,15 @@ bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
 
     // (2) handle quit
     if (request.find("quit") != request.end()) {
-        // TODO: update code so user knows its own player id
         g_ptr->handle_request_quit(player_id);
         is_quit = true;
 	}
-    
-    // print board out for the time being to observe state
-    // g_ptr->print_board();
-    // std::cout << std::endl;
 
+    // (3) handle exit command
+    if (request.find("exit") != request.end()) {
+        g_ptr->handle_request_exit(player_id);
+	}
+    
     return is_quit;
 }
 
@@ -204,8 +239,8 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
         json e_json = g_ptr->get_next_event(player_id);
         is_connected = write_to_socket(cfd, format_server_msg(e_json, event_header, event_body_header));
 
-        // if it is a quit event, return (joining the changelog thread back to client connection thread)
-        if (g_ptr->is_quit_event(player_id, e_json)) {
+        // if it is a exit / quit event, return (joining the changelog thread back to client connection thread)
+        if (g_ptr->is_exit_event(e_json)) {
             return;
         }
     }
@@ -243,7 +278,7 @@ std::string format_server_msg(nlohmann::json command, const char* header, const 
 bool write_to_socket(int cfd, std::string msg) {
     int n_written = write(cfd, msg.c_str(), msg.size());
     if (n_written < msg.size()) {
-        std::cerr << "Error writing to client on cdf" << std::to_string(cfd) << std::endl;
+        std::cerr << "Error writing to client on cdf " << std::to_string(cfd) << std::endl;
     }
 
     return n_written == msg.size();

@@ -17,14 +17,12 @@ using json = nlohmann::json;
 //          create_player: adds new player to the board --- creates event
 //          handle_request_move: moves the player in the board --- create event
 //          handle_request_quit: deletes the player in the board --- creates event
+//          handle_request_exit: ends the game for all players --- creates event
 //          get_next_event: blocks until new event in the CL queue
 //
 
-// Game::init(int w):
-//      Starts the game   
-//      Copy Constructor deleted given mutex + game should not be copied
-
 Game::Game(int w) { 
+    exit_condition = false;
     board_.init_graph(w);
     n_players = 0;
 
@@ -55,23 +53,12 @@ json Game::get_next_event(int player_id) {
     return changelog_.pop(player_id);
 }
 
-// bool has_quit(int player_id):
-//      Uses condition variable to wait for changelog to have new events in the queue
-//      Once there is a new event in the queue, pop it and pass to the handler
+// bool is_exit_event(json e_json):
+//      checks if the event should result in an exit (e.g. quit / exit)
 
-bool Game::has_quit(int player_id) {
-    std::unique_lock<std::mutex> lock(b_mutex);
-
-    return board_.has_quit(player_id);
+bool Game::is_exit_event(json e_json) {
+    return Event::is_exit_event(e_json);
 }
-
-// bool is_quit_event(int player_id, json e_json):
-//      checks if the event is the player_id quitting the board
-
-bool Game::is_quit_event(int player_id, json e_json) {
-    return Event::is_quit_event(player_id, e_json);
-}
-
 
 // int handle_add_player (int cfd)
 //      CRITCAL SECTION
@@ -81,7 +68,7 @@ bool Game::is_quit_event(int player_id, json e_json) {
 //      returns player_id, board_json
 
 std::tuple<int, json> Game::handle_add_player(int cfd) {
-    // updating both cl / board, need to lock both avoiding deadlock
+    // updating / checking cl, board, need to lock all avoiding deadlock
     std::lock(b_mutex, cl_mutex);
     std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
     std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
@@ -112,7 +99,7 @@ std::tuple<int, json> Game::handle_add_player(int cfd) {
 //      pushes to the change log + notifys the cv
 
 void Game::handle_request_move(int player_id, int dir) {
-    // updating both cl / board, need to lock both avoiding deadlock
+    // updating / checking cl, board, need to lock all avoiding deadlock
     std::lock(b_mutex, cl_mutex);
     std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
     std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
@@ -121,7 +108,8 @@ void Game::handle_request_move(int player_id, int dir) {
     struct locpair lp = board_.move_player(player_id, dir);
     if(lp.new_loc != lp.old_loc) { 
         changelog_.push(std::make_unique<Move>(Move(player_id, dir))); 
-        lock_cl.unlock();
+        lock_cl.unlock(); 
+        
         cl_cv.notify_all();
     }
 
@@ -131,14 +119,14 @@ void Game::handle_request_move(int player_id, int dir) {
 // void handle_request_quit (int player_i)
 //      CRITICAL SECTION
 //      deletes the player from the share board state
-//      pushes to the change log + onotifys the cv
+//      pushes to the changelog + notify the cv
 
 void Game::handle_request_quit(int player_id) {
-    // updating both cl / board, need to lock both avoiding deadlock
+    // updating / checking cl, board, need to lock all avoiding deadlock
     std::lock(b_mutex, cl_mutex);
     std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
     std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
-
+   
     // try delete; if successful, log the chnage in the changelog and alter threads
     int loc = board_.delete_player(player_id);
     if(loc != -1) {
@@ -150,6 +138,18 @@ void Game::handle_request_quit(int player_id) {
     return;
 }
 
+// void handle_request_exit ()
+//      CRITICAL SECTION
+//      pushes an exit event from the changelog + notify the cv
+
+void Game::handle_request_exit(int player_id) {
+    std::unique_lock<std::mutex> lock(cl_mutex);
+    changelog_.push(std::make_unique<Exit>(Exit(player_id, 1)));
+    lock.unlock();
+    cl_cv.notify_all();
+
+    return;
+}
 //
 //
 // ********** OUTPUT FUNCTIONS ***********
@@ -160,9 +160,6 @@ json Game::get_board_json() {
     json j = board_.get_json();
     return j;
 }
-
-// void Game::get_board_json()
-//      Prints board object out
 
 void Game::print_board() {
     board_.print();

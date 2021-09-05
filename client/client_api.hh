@@ -32,7 +32,7 @@ bool handle_event(nlohmann::json event_json, Controller* c_ptr);
 //      wrapper around C socket syscalls
 //      initializes and connects to socket
 //      returns a sfd (if < 0, there was an error)
-int init_socket();
+int init_socket(const int port, const char* path);
 
 // std::String add_request_wrapper(std::string body_str)
 //		wrapes the body of the message in the correcet protocol

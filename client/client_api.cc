@@ -135,7 +135,7 @@ bool handle_event(json event_json, Controller* c_ptr) {
 //      initializes and connects to socket
 //      returns a socket fd (if == -1, there was an error)
 
-int init_socket() {
+int init_socket(const int port, const char* path) {
     int sfd;
 	struct sockaddr_in server;
 	

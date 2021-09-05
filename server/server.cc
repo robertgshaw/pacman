@@ -8,7 +8,7 @@
 #include "../shared/nlohmann/json.hpp"
 
 #include "server_api.hh"
-#include "game.hh"
+//#include "game.hh"
 
 static const int port = 6169;
 static const int board_size = 21;
@@ -29,17 +29,24 @@ int main(int argc, char** argv) {
 
     // create game obj, which will hold the shared state
     Game game_(board_size);
+    
+    // create exitpipe obj, which will be use to tell worker threads to exit, if ended
+    Exitpipe exitpipe_;
+
+    // create vector of connection threads to handle each user
+    std::vector<std::thread> connections;
 
     // vars used for the socket
     socklen_t c = sizeof(struct sockaddr);
     struct sockaddr_in client;
-
-    // vars used to init a connection
     int player_id;
     json board_json;
 
-    // accept new client connections, blocking while waiting 
-    while(true) {
+    // accept client connection + spin off connection threads until exit
+    bool is_exited = false;
+    while(!is_exited) {
+
+        // accept new connections
         int cfd = accept(sfd, (sockaddr*) &client, &c);
         if (cfd < 0) {
 
@@ -50,12 +57,32 @@ int main(int argc, char** argv) {
             return 1;
         }
 
-        // create player + launch thread to listen to CL + Player Commands
+        // add a new pipe pair
+        exitpipe_.add_fd_pair();
+        
+        // create player + launch connection threads
         std::tie(player_id, board_json) = game_.handle_add_player(cfd);
-        std::thread conn_t(handle_connection, cfd, player_id, &game_, board_json);
-        conn_t.detach();
+        connections.push_back(std::thread(handle_connection, cfd, exitpipe_.pop_reader_fd(), player_id, &game_, board_json));
     } 
 
-    close(sfd);
+    // close the exit notification pipes
+    exitpipe_.cleanup_writers();
+
+    // join connection threads back together
+    for (std::thread & connection : connections) {
+        if (connection.joinable()) {
+            std::cout << "Joining thread " << connection.get_id() << std::endl;
+            connection.join();
+        } else {
+            // should not get here
+            std::cerr << "Error: Thread " << connection.get_id() << " could not be joined" << std::endl;
+        }
+    }
+
+    // close the sfd    
+    shutdown(sfd, SHUT_RDWR);
+    if(close(sfd) < 0) {
+        std::cerr << "Error: close failed for sfd:" << std::endl;
+    }
 	return 0;
 }

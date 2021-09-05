@@ -14,6 +14,7 @@ using json = nlohmann::json;
 
 int main(int argc , char *argv[]) {
 	
+	// TODO - these need to be passes as arguments to init_socket()
 	int port;
 	char* path;
 
@@ -26,7 +27,7 @@ int main(int argc , char *argv[]) {
 	}
 
 	// init and connect to socket
-	int sfd = init_socket(); 
+	int sfd = init_socket(port, path); 
     if (sfd == -1) {
 		std::cerr << "Shutting down." << std::endl;
 		return 1;

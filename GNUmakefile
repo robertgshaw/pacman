@@ -1,4 +1,4 @@
-server_objects = server.o game.o board.o changelog.o event.o server_api.o 
+server_objects = server.o game.o board.o changelog.o event.o server_api.o exitpipe.o
 client_objects = client.o client_api.o controller.o view.o
 shared_objects = board.o utilities.o
 
@@ -16,7 +16,7 @@ clean:
 	rm server.out client.out $(server_objects) $(client_objects) $(shared_objects)
 
 # server object file recipes
-server.o: server/server.cc server/server_api.hh server/game.hh
+server.o: server/server.cc server/server_api.hh
 	g++ -c server/server.cc -pthread -std=c++14
 
 game.o: server/game.cc server/changelog.hh server/event.hh shared/board.hh
@@ -28,8 +28,11 @@ changelog.o: server/changelog.cc server/event.hh
 event.o: server/event.cc
 	g++ -c server/event.cc -pthread -std=c++14
 
-server_api.o: server/server_api.cc server/game.hh
+server_api.o: server/server_api.cc server/game.hh server/exitpipe.hh
 	g++ -c server/server_api.cc -pthread -std=c++14
+
+exitpipe.o: server/exitpipe.cc
+	g++ -c server/exitpipe.cc -pthread -std=c++14
 
 # client object file recipes
 client.o: client/client.cc client/client_api.hh client/controller.hh shared/utilities.hh 
