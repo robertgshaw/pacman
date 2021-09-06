@@ -77,6 +77,14 @@ void handle_requests(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr);
 
 bool handle_request(nlohmann::json request, int cfd, int player_id, Game* g_ptr);
 
+// parse_request(buf_ptr, request)
+//      parses the request according to the API from the buffer
+//      buf_ptr, request are passed by REFERENCE + state is updated
+//          returns true if there was a request to process
+//          returns false if there was a non-conforming request
+
+bool parse_request(char*& buf_ptr, std::string& request)
+
 //
 // (2) CHANGELOG EVENTS
 //
@@ -98,6 +106,18 @@ std::string format_server_msg(nlohmann::json command, const char* header, const 
 // ********** SYSCALL WRAPPERS **********
 //
 //
+
+// is_valid_request_header(buf_ptr, len)
+//      checks whether a request header is well formatted
+//      updates len with the lenght of the request
+
+bool is_valid_request_header(char* buf_ptr, int& len);
+
+// is_empty_buf(ptr)
+//      checks if a buffer is empty or has data to read
+
+bool is_empty_buf(char* ptr);
+
 
 // write_to_socket(cfd, msg)
 //      wrapper around underlying c syscalls

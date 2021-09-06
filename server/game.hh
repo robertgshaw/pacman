@@ -44,7 +44,7 @@ class Game {
 
         // wrapper around changelog API, implementing synchronization - gets json of next event
         nlohmann::json get_next_event(int player_id);
-        bool is_exit_event(nlohmann::json e_json);
+        bool is_exit_event(nlohmann::json e_json, int player_id);
 
         // outputting / displaying state
         void print_board(); 

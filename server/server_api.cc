@@ -74,55 +74,6 @@ void handle_connection(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr, j
 
 // (A) CLIENT REQUESTS
 
-
-bool is_valid_request_header(char* buf_ptr, int& len) {
-    char equals_sign;
-    return sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=';
-}
-
-bool is_empty_buf(char* ptr) {
-    return ptr == NULL || ptr[0] == '\0';
-}
-
-// bool parse_request(buf_ptr, request)
-//      parses the request according to the API from the buffer
-//      buf_ptr, request are passed by REFERENCE + state is updated
-//      returns true if there was a request to process
-//      returns false if there was a non-conforming request
-
-bool parse_request(char*& buf_ptr, std::string& request) {
-    int len;
-
-    // if the request header conforms to the API, attempt to extract request body
-    if (is_valid_request_header(buf_ptr, len)) {
-    
-        // extract the REQUEST body from the buffer
-        request = buf_ptr;
-        int nread = request.size();           
-        int body_start_ind = request.find(client_body_request_format) + client_body_keyword_len;    
-        int body_len_in_buf = std::min(len, nread - body_start_ind);
-        request = request.substr(body_start_ind, body_len_in_buf);
-
-        // if buffer contained entire request, return, updating the state trackers
-        if (body_len_in_buf == len) {
-            
-            // move the buffer pointer over to the start of the next request, update skip flag
-            buf_ptr += body_start_ind + len;
-            return true;
-
-        } else {
-            std::cerr << "Error: buffer could not fit the entire request for client" << std::endl;
-            return false;
-        }
-
-    // if the request does not conform to the API, exit (TODO: do something better here)
-    } else {
-        std::cerr << "Error: request does not conform to the API for client" << std::endl;
-        return false;
-    }
-
-}
-
 // void handle_requests(cfd, exit_pipe_cfd, player_id, g_ptr)
 //      MAIN LOOP EXECUTED BY THE THREAD, handling client requests:
 //      Blocks on client socket and on exit_pipe_cfd
@@ -201,97 +152,6 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
     std::cout << "exiting player id = " << std::to_string(player_id) << std::endl;
 }
 
-// void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
-
-//     // setup variables to read from the socket
-//     char buf[BUFSIZ];
-//     memset(buf, '\0', BUFSIZ);
-//     char* buf_ptr = buf;
-//     int len, nread, body_start_ind, body_len_in_buf;
-//     bool skip_get = false;
-    
-//     char equals_sign;
-//     std::string request;
-   
-//     // setup file descriptors for SELECT
-//     fd_set readfds;
-//     FD_ZERO(&readfds);
-//     FD_SET(exit_pipe_fd, &readfds);    // add exit signal pipe
-//     FD_SET(cfd, &readfds);              // add the socket
-//     int max_fd = cfd > exit_pipe_fd ? cfd : exit_pipe_fd;
-
-//     bool is_exited = false;
-
-//     // read the client request from the socket
-//     //      skip_get == true when we know there is already a well formed header already in buf
-//     while (skip_get || select(max_fd + 1, &readfds, NULL, NULL, NULL) > 0) {    
-        
-//         // if there was not skip, then select unblocked
-//         if (!skip_get) {
-
-//             // if we got a signal in the exit_pipe_cfd, then publish an exit request to changelog and exit
-//             if (FD_ISSET(exit_pipe_fd, &readfds)) {
-               
-//                 // publish exit_request
-//                 json exit_request = { { "exit", 1 } };
-//                 handle_request(exit_request, cfd, player_id, g_ptr);
-//                 return;
-//             } 
-
-//             // otherwise, we can read from the socket; exit if there is nothing to read
-//             assert(FD_ISSET(cfd, &readfds));
-//             if (!read_from_socket(cfd, buf_ptr, BUFSIZ - (buf_ptr - buf))) {
-//                 return;
-//             }
-//         }
-
-//         // parse the request of form REQUEST len=XXX, body=YYY      
-//         if (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=') {
-            
-//             // extract the REQUEST body from the string
-//             request = buf_ptr;
-//             nread = request.size();           
-//             body_start_ind = request.find(client_body_request_format) + client_body_keyword_len;    
-//             body_len_in_buf = std::min(len, nread - body_start_ind);
-//             request = request.substr(body_start_ind, body_len_in_buf);
-
-//             // IF buffer contained entire request, handle request + loop back to handle next request
-//             if (len == body_len_in_buf) {
-                
-//                 // handle the json request; if true, then the request was to quit 
-//                 // as such, exit from this function and go back to the client connection 
-//                 if (handle_request(json::parse(request), cfd, player_id, g_ptr)) {
-//                     return;
-//                 }
-                
-//                 // move the buffer pointer over to the start of the next request, update skip flag
-//                 buf_ptr += body_start_ind + len;
-//                 skip_get = (sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=');
-
-//                 // reset the buf ptr back to the start of the buffer    
-//                 if (!skip_get) {
-//                     memset(buf, '\0', BUFSIZ); // clears out memory
-//                     buf_ptr = buf;
-//                 }
-
-//             // IF buffer did not contain the entire request, exit (TODO: do something better here)
-//             } else {
-//                 std::cerr << "Error: buffer could not fit the entire request for client " << std::to_string(player_id) << std::endl;
-//                 return;
-//             }
-
-//         // IF the request does not conform to the API, exit (TODO: do something better here)
-//         } else {
-//             std::cerr << "Error: request does not conform to the API for client " << std::to_string(player_id) << std::endl;
-//             return;
-//         }
-//     }
-
-//     // exit if there was some error with select
-//     std::cerr << "Error: select call " << "returned -1 (error) on client " << std::to_string(player_id)  << std::endl; 
-//     return; 
-// }
-
 // void handle_request(request, cfd, player_id, g_ptr) 
 //      IMPLEMENTS INTERFACE BETWEEN CLIENT CONNECTION + BOARD API
 //      Command options include
@@ -328,6 +188,45 @@ bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
     return is_quit;
 }
 
+// bool parse_request(buf_ptr, request)
+//      parses the request according to the API from the buffer
+//      buf_ptr, request are passed by REFERENCE + state is updated
+//      returns true if there was a request to process
+//      returns false if there was a non-conforming request
+
+bool parse_request(char*& buf_ptr, std::string& request) {
+    int len;
+
+    // if the request header conforms to the API, attempt to extract request body
+    if (is_valid_request_header(buf_ptr, len)) {
+    
+        // extract the REQUEST body from the buffer
+        request = buf_ptr;
+        int nread = request.size();           
+        int body_start_ind = request.find(client_body_request_format) + client_body_keyword_len;    
+        int body_len_in_buf = std::min(len, nread - body_start_ind);
+        request = request.substr(body_start_ind, body_len_in_buf);
+
+        // if buffer contained entire request, return, updating the state trackers
+        if (body_len_in_buf == len) {
+            
+            // move the buffer pointer over to the start of the next request, update skip flag
+            buf_ptr += body_start_ind + len;
+            return true;
+
+        } else {
+            std::cerr << "Error: buffer could not fit the entire request for client" << std::endl;
+            return false;
+        }
+
+    // if the request does not conform to the API, exit (TODO: do something better here)
+    } else {
+        std::cerr << "Error: request does not conform to the API for client" << std::endl;
+        return false;
+    }
+
+}
+
 
 // (B) CHANGELOG EVENTS
 
@@ -347,7 +246,8 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
         is_connected = write_to_socket(cfd, format_server_msg(e_json, event_header, event_body_header));
 
         // if it is a exit / quit event, return (joining the changelog thread back to client connection thread)
-        if (g_ptr->is_exit_event(e_json)) {
+        if (g_ptr->is_exit_event(e_json, player_id)) {
+            std::cout << "here";
             return;
         }
     }
@@ -376,6 +276,22 @@ std::string format_server_msg(nlohmann::json command, const char* header, const 
     msg.append(body_str);                           // COMMAND len=xxx, body=abcdef...
 
     return msg;
+}
+
+// is_valid_request_header(buf_ptr, len)
+//      checks whether a request header is well formatted
+//      updates len with the lenght of the request
+
+bool is_valid_request_header(char* buf_ptr, int& len) {
+    char equals_sign;
+    return sscanf(buf_ptr, client_request_format, &len, &equals_sign) == 2 && equals_sign == '=';
+}
+
+// is_empty_buf(ptr)
+//      checks if a buffer is empty or has data to read
+
+bool is_empty_buf(char* ptr) {
+    return ptr == NULL || ptr[0] == '\0';
 }
 
 // read_from_socket(cfd, buf_ptr, sz):
@@ -439,4 +355,3 @@ int init_socket(int port, int max_conns) {
 
     return sfd;
 }
-

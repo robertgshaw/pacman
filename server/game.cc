@@ -56,8 +56,8 @@ json Game::get_next_event(int player_id) {
 // bool is_exit_event(json e_json):
 //      checks if the event should result in an exit (e.g. quit / exit)
 
-bool Game::is_exit_event(json e_json) {
-    return Event::is_exit_event(e_json);
+bool Game::is_exit_event(json e_json, int player_id) {
+    return Event::is_exit_event(e_json, player_id);
 }
 
 // int handle_add_player (int cfd)

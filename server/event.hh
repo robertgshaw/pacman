@@ -11,8 +11,9 @@ class Event {
         virtual nlohmann::json get_json() = 0;
 
         // checks if the json form of the event is a quit for player_id 
-        static bool is_exit_event(nlohmann::json e_json) {
-            return e_json.find("quit") != e_json.end() || e_json.find("exit") != e_json.end();
+        static bool is_exit_event(nlohmann::json e_json, int player_id) {
+            return (e_json.find("quit") != e_json.end() && e_json["quit"]["pid"] == player_id) 
+                || e_json.find("exit") != e_json.end();
         } 
 
         int player_id;
