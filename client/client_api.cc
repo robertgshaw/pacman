@@ -26,7 +26,7 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 
 		if (send(sfd, msg.c_str(), msg.size(), 0) < 0)	{
 			c_ptr->set_quit();
-			ofs << "Send move request failed" << std::endl;
+			ofs << "Send move request failed." << std::endl;
 			return;
 		}
 
@@ -37,10 +37,10 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 	// if the user sent "q", send a quit request
 	c_ptr->set_quit();
 	std::string msg = format_client_quit_request();
-	ofs << msg << std::endl;
+	ofs << "sending quit message: " << msg << std::endl;
 
 	if (send(sfd, msg.c_str(), msg.size(), 0) < 0)	{
-		ofs << "Send quit request failed" << std::endl;
+		ofs << "Send quit request failed." << std::endl;
 		return;
 	}
 
@@ -56,13 +56,17 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 void handle_changelog(int sfd, Controller* c_ptr) {
 
 	std::ofstream ofs;
-	ofs.open("changelog_output.txt", std::ofstream::out | std::ofstream::app);
+	char name[50];
+	int n = sprintf(name, "changelog_output_%d.txt", c_ptr->player_id);
+	ofs.open(name, std::ofstream::out | std::ofstream::app);
 
 	// loop, listening to the server for changelog updates
 	char server_msg[BUFSIZ];
 
 	// TOOD: update this to have some atomic that user is still connected
 	while(true) {
+
+		ofs << "before recv" << std::endl;
 
 		// read the message from the server
 		if (recv(sfd, server_msg, BUFSIZ, 0) <= 0) {
@@ -75,6 +79,7 @@ void handle_changelog(int sfd, Controller* c_ptr) {
 		// check if the UI has suggested that we should quit before
 		// if it has, then we will eventually get here (since user quitting is an event)
 		if (c_ptr->should_quit()) {
+			ofs << "quitting" << std::endl;
 			ofs.close();
 			return;
 		}

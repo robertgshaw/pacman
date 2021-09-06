@@ -105,6 +105,13 @@ std::string format_server_msg(nlohmann::json command, const char* header, const 
 
 bool write_to_socket(int cfd, std::string msg);
 
+// read_from_socket(cfd, buf_ptr, sz):
+//      reads from socket, blocking
+//      returns true if there is text to read from buf_ptr
+//      returns false if there is none (i.e. socket connection closed)
+
+bool read_from_socket(int cfd, char* buf_ptr, int sz);
+
 // int init_socket(port, max_conns)
 //      connect, binds, listens 
 //      binds to port
@@ -112,6 +119,5 @@ bool write_to_socket(int cfd, std::string msg);
 //      returns a socket fd; returns -1 if there was an error
 
 int init_socket(int port, int max_conns);
-
 
 #endif

@@ -27,6 +27,7 @@ class Controller {
 
         bool should_quit();
         void set_quit();
+        int player_id; 
 
     private:
         FILE* log_fp;
@@ -36,7 +37,7 @@ class Controller {
         View view_;
 
         // id of the player on this client
-        int player_id; 
+        // int player_id; 
     
         bool quit;
 };

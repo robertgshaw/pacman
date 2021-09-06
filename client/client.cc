@@ -41,7 +41,7 @@ int main(int argc , char *argv[]) {
 	// get the board from the server, reading BUFSIZ at a time
 	int n_read = recv(sfd, server_msg, BUFSIZ, 0); 
 	if (n_read < 0) {
-		std::cerr << " Shutting down..." << std::endl;
+		std::cerr << " Shutting down." << std::endl;
 		close(sfd);
 		return 1;
 	}
