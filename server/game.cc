@@ -131,7 +131,6 @@ void Game::handle_request_quit(int player_id) {
     int loc = board_.delete_player(player_id);
     if(loc != -1) {
         changelog_.push(std::make_unique<Quit>(Quit(player_id, loc)));
-        std::cout << "pushing quit to the changelog ... " << std::endl;
         lock_cl.unlock();
         cl_cv.notify_all();
     }

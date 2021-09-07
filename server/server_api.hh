@@ -25,6 +25,25 @@
 //
 //
 
+// Server design as follows:
+//      Event driven architecture - each client is responsible for maintaining its own local state of the game
+//          The clients connect to the server. The server then sends clients any "event" that happens in the game/
+//          As such, the server's job is to (1) recieve requests from the client (2) send out events to the client
+//
+//      Utilize a reader thread / writer thread paradigm to handle getting requests and sending out events
+//          Since sockets are fully duplex and we use a single reader thread + a single writer thread,
+//          there is a no race condition + therefore no synchronization needed for reads / writes.
+// 
+//      Utilize an "exit pipe" to notify threads to exit if called by the server's command line
+//          Each connection is passed a pipe fd (exit_pipe_fd) which can recieve this message from the main thread
+
+// API defined as follows:
+//      (A) Clients send requests containing commands to the server
+//          Command are of form     REQUEST len=[int], body=[request]
+//
+//      (B) Server listens to the changelog; when events pushed sends to client
+//          Events are of form      EVENT len=[int], body=[event]
+
 // API defined as follows:
 //      (A) Clients send requests containing commands to the server
 //          Command are of form     REQUEST len=[int], body=[request]
@@ -65,7 +84,7 @@ void handle_connection(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr, n
 //              (2) there is a quit request sent by the client
 //              (3) some type of error occurs with the socket
 
-void handle_requests(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr);
+void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr);
 
 // handle_request(request) 
 //      IMPLEMENTS INTERFACE BETWEEN CLIENT CONNECTION + BOARD API
@@ -83,7 +102,7 @@ bool handle_request(nlohmann::json request, int cfd, int player_id, Game* g_ptr)
 //          returns true if there was a request to process
 //          returns false if there was a non-conforming request
 
-bool parse_request(char*& buf_ptr, std::string& request)
+bool parse_request(char*& buf_ptr, std::string& request);
 
 //
 // (2) CHANGELOG EVENTS

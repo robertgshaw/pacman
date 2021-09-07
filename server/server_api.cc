@@ -14,13 +14,16 @@ using json = nlohmann::json;
 //
 
 // Server design as follows:
-//      Utilize a reader thread / writer thread paradigm
+//      Event driven architecture - each client is responsible for maintaining its own local state of the game
+//          The clients connect to the server. The server then sends clients any "event" that happens in the game/
+//          As such, the server's job is to (1) recieve requests from the client (2) send out events to the client
+//
+//      Utilize a reader thread / writer thread paradigm to handle getting requests and sending out events
 //          Since sockets are fully duplex and we use a single reader thread + a single writer thread,
-//          there is a no race condition + therefore no synchronization needed for reads / writes
+//          there is a no race condition + therefore no synchronization needed for reads / writes.
 // 
-//          However, we need to synchronize closing the cfd, as race conditions can exist +  
-//          calling close on already closed fd can cause undefined behavior. Interesting article on options here:
-//              https://www.drdobbs.com/parallel/file-descriptors-and-multithreaded-progr/212001285    
+//      Utilize an "exit pipe" to notify threads to exit if called by the server's command line
+//          Each connection is passed a pipe fd (exit_pipe_fd) which can recieve this message from the main thread
 
 // API defined as follows:
 //      (A) Clients send requests containing commands to the server
@@ -37,7 +40,7 @@ using json = nlohmann::json;
 //          (3) Uses this thread to listen for client commands (part A of API)
 //          (4) Rejoins together and frees the OS resources
 
-void handle_connection(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr, json board_json) {
+void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, json board_json) {
 
     // create start json
     json start_json;
@@ -46,8 +49,11 @@ void handle_connection(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr, j
 
     // (1) send initial board to the socket
     if (!write_to_socket(cfd, format_server_msg(start_json, start_header, start_body_header))) {
-        std::cerr << "Failed to send board for p_id:" << std::to_string(player_id) << std::endl;
-        close(cfd);
+        std::cerr << "Error: write to socket failed for p_id:" << std::to_string(player_id) << std::endl;
+        shutdown(cfd, SHUT_RDWR);
+        if(close(cfd) < 0) {
+            std::cerr << "Error: Close failed for player_id:" << std::to_string(player_id) << " after failed write to socket" << std::endl;
+        }
         return;
     }
 
@@ -55,22 +61,17 @@ void handle_connection(int cfd, int exit_pipe_cfd, int player_id, Game* g_ptr, j
     std::thread t(handle_changelog, cfd, player_id, g_ptr);
     
     // (3) use this thread to listen to for user commands - reader from socket
-    handle_requests(cfd, exit_pipe_cfd, player_id, g_ptr);
+    handle_requests(cfd, exit_pipe_fd, player_id, g_ptr);
     
     // (4) join together and free underlying resources
     t.join();
     shutdown(cfd, SHUT_RDWR);
     if(close(cfd) < 0) {
-        std::cerr << "Close failed for player_id:" << std::to_string(player_id) << " on cfd:" << std::to_string(cfd) << std::endl;
+        std::cerr << "Error: close failed for player_id:" << std::to_string(player_id) << " on cfd:" << std::to_string(cfd) << std::endl;
     }
-    
-    // if (close(exit_pipe_cfd) < 0) {
-    //     std::cerr << "Closed failed for player_id: " << std::to_string(player_id) << "on exit pipe reader cfd: " << exit_pipe_cfd << std::endl;
-    // }
 
     return;
 }
-
 
 // (A) CLIENT REQUESTS
 
@@ -118,18 +119,13 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
             FD_SET(exit_pipe_fd, &readfds);
             FD_SET(cfd, &readfds);
             
-            // std::cout << "before select player id = " << std::to_string(player_id) << std::endl;
-
             // wait until either there is data from the cfd socket OR from the exit signal pipe
             int r = select((cfd > exit_pipe_fd ? cfd : exit_pipe_fd) + 1, &readfds, NULL, NULL, NULL);
-
-            //std::cout << "after select player id = " << std::to_string(player_id) << std::endl;
-
             if (r < 0) {
-                std::cerr << "Error: select in handle_requests returned an error on player_id " << std::to_string(player_id) << std::endl;
+                std::cerr << "Error: select in handle_requests returned an error." << std::endl;
                 is_exited = true;
             } else if (r = 0) {
-                std::cerr << "Error: select in handle_request timed out" << std::endl;
+                std::cerr << "Error: select in handle_request timed out." << std::endl;
                 is_exited = true;
             } else {
 
@@ -138,18 +134,18 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
                     json exit_request = { { "exit", 1 } };
                     handle_request(exit_request, cfd, player_id, g_ptr);
                     is_exited = true;
-                } 
-
+                
                 // if we got a signal from the socket, read from socket into the buffer, exiting if there is nothing / an error
-                assert(FD_ISSET(cfd, &readfds));
-                if (!read_from_socket(cfd, buf_ptr, BUFSIZ)) {
-                    is_exited = true;
+                } else {
+                    assert(FD_ISSET(cfd, &readfds));
+                    if (!read_from_socket(cfd, buf_ptr, BUFSIZ)) {
+                        is_exited = true;
+                    }
                 }
-            }
+            }   
         }
     }
 
-    std::cout << "exiting player id = " << std::to_string(player_id) << std::endl;
 }
 
 // void handle_request(request, cfd, player_id, g_ptr) 
@@ -162,9 +158,7 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
 bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
 
     bool is_quit = false;
-
-    std::cout << "player id: " << std::to_string(player_id) << "request: " << request.dump() << std::endl;
-
+    
     // (1) handle move
     if (request.find("move") != request.end()) {
         // TODO: handle badly formed json
@@ -242,12 +236,10 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
 
         // get event from changelog (note: this blocks) + write to user
         json e_json = g_ptr->get_next_event(player_id);
-        std::cout << "writing to socket: " << e_json.dump() << std::endl;
         is_connected = write_to_socket(cfd, format_server_msg(e_json, event_header, event_body_header));
 
         // if it is a exit / quit event, return (joining the changelog thread back to client connection thread)
         if (g_ptr->is_exit_event(e_json, player_id)) {
-            std::cout << "here";
             return;
         }
     }

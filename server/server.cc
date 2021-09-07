@@ -28,48 +28,38 @@ void run_server(int sfd, int exit_pipe_fd) {
     int player_id;
     json board_json;
 
+    // vars for slect
     fd_set readfds;
     int max_fd = sfd > exit_pipe_fd ? sfd : exit_pipe_fd;
 
+    // break condition
     bool is_exited = false;
 
     // accept client connection + spin off connection threads until exit
     while(!is_exited) {
-        std::cout << "before select" << std::endl;
+
+        // setup readfds set for select
         FD_ZERO(&readfds);
         FD_SET(exit_pipe_fd, &readfds);    // add exit signal pipe
         FD_SET(sfd, &readfds);             // add the socket
 
         // accept new connections
-        int r = select(max_fd + 1 , &readfds , NULL , NULL , NULL);
-
-        std::cout << "after select" << std::endl;
-        
+        int r = select(max_fd + 1, &readfds, NULL, NULL, NULL);                
         if (r < 0) {
-            std::cerr << "TODO: shutdown the board on error";
+            std::cerr << "TODO: shutdown the board on error" << std::endl;
         } else if (r == 0) {
-            std::cerr << "should not get here";
+            std::cerr << "TODO: shutdown the board on timeout:" << std::endl;
         } else if (FD_ISSET(exit_pipe_fd, &readfds)) {
             is_exited = true;
-            char rbuf[BUFSIZ];
-            
-            size_t n = read(exit_pipe_fd, rbuf, BUFSIZ);
-            assert(n >= 0);
-            rbuf[n] = 0;
-
-            printf("Read %s\n", rbuf);
-
         } else {
-            // std::cout << "here2" << std::endl;
             assert(FD_ISSET(sfd, &readfds));
             int cfd = accept(sfd, (sockaddr*) &client, &c);
             if (cfd < 0) {
 
                 // TODO: tell threads that we are dead + that it should shut down
-                perror("accept");
+                std::cerr << "Error: accept on sfd returned -1" << std::endl;
                 close(cfd);
-                close(sfd);
-                return;
+                is_exited = true;
             }
 
             // add a new pipe pair
@@ -91,25 +81,20 @@ void run_server(int sfd, int exit_pipe_fd) {
             connection.join();
             std::cout << "[DONE]" << std::endl;
         } else {
-            // should not get here
+            // should not get here, since we never detach or join otherwise
+            // THIS should be the only place we join
             std::cerr << "Error: Thread " << connection.get_id() << " could not be joined" << std::endl;
+            assert(0 == 1);
         }
     }
 
     // cleanup all the exit pipe resources
     exitpipe_.close_all();
-    close(exit_pipe_fd);
-
-    // close the sfd    
-    shutdown(sfd, SHUT_RDWR);
-    if(close(sfd) < 0) {
-        std::cerr << "Error: close failed for sfd:" << std::endl;
-    }
 }
 
 int main(int argc, char** argv) {
 
-    // initialzie socket
+    // initialize socket for exit
     std::cout << "Initializing socket ...";    
     int sfd = init_socket(port, max_players);
     if (sfd == -1) {
@@ -119,19 +104,21 @@ int main(int argc, char** argv) {
         std::cout << "[DONE] ... Listening on port " << std::to_string(port) << std::endl;
     }
 
-    // initialize game, spinning off a thread to run the game server
-    //      create a pipe to send exit messages from the active process to the run_server thread
+    // initialize the game
     std::cout << "Initializing game ...";
+
+    // create a pipe used to signal exit
     int pfds[2];
     if (pipe(pfds) != 0) {
         std::cerr << "Error opening pipe for main server thread ... shutting down." << std::endl;
-        return 0;
+        return 1;
     }
 
+    // spin off thread whcih processes the server
     std::thread server_t  = std::thread(run_server, sfd, pfds[0]);
     std::cout << "[DONE]"<< std::endl;
 
-    // listen for commands from the command line
+    // on the main thread, get input from user at the server command line
     FILE* command_file = stdin;
 
     char buf[BUFSIZ];
@@ -166,24 +153,40 @@ int main(int argc, char** argv) {
         bufpos = strlen(buf);
         if (bufpos == BUFSIZ - 1 || (bufpos > 0 && buf[bufpos - 1] == '\n')) {
             std::string cmd(buf); 
-            std::cout << cmd.substr(0,4) << std::endl;
             if (cmd.substr(0,4) == "exit") {
-
-                std::cout << "in exit" << std::endl;
                 char wbuf[BUFSIZ];
                 sprintf(wbuf, "exit");
                 size_t n = write(pfds[1], wbuf, strlen(wbuf));
-                std::cout << "wrote n = " << std::to_string(n) << " bytes to pipe" << std::endl;
-                exited = true;
-                
+                exited = true;                
             }
             bufpos = 0;
             needprompt = true;
         }
     }
 
+    // free OS resources created by main
+
+    // join the server_t thread
     server_t.join();
-    close(pfds[1]);
+
+    // close the exit pipe
+    if (close(pfds[0]) < 0) {
+        std::cerr << "Error: close failed for pfds[0]" << std::endl;
+    }
+    if (close(pfds[1]) < 0) {
+        std::cerr << "Error: close failed for pfds[1]" << std::endl;
+    }
+
+    // close the command file
+    if (fclose(command_file) < 0) {
+        std::cerr << "Error: close failed for command file" << std::endl;
+    }
+
+    // close the sfd    
+    shutdown(sfd, SHUT_RDWR);
+    if(close(sfd) < 0) {
+        std::cerr << "Error: close failed for sfd" << std::endl;
+    }
 
 	return 0;
 }

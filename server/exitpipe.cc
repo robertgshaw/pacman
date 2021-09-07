@@ -25,7 +25,6 @@ void Exitpipe::exit_all() {
         char wbuf[BUFSIZ];
         sprintf(wbuf, "exit");
         size_t n = write(fd_pair.writer, wbuf, strlen(wbuf));
-        std::cout << "wrote n = " << std::to_string(n) << " bytes to pipe" << std::endl;
     }
 }
 
