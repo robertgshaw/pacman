@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
                 buf[bufpos] = 0;
             } else {
                 if (ferror(command_file)) {
-                    perror("sh61");
+                    std::cerr << "Error reading the user input inside main";
                 }
                 break;
             }
@@ -79,25 +79,18 @@ int main(int argc, char** argv) {
     }
 
     // free OS resources created by main
+    server_t.join();                    // server thread
 
-    // join the server_t thread
-    server_t.join();
-
-    // close the exit pipe
-    if (close(pfds[0]) < 0) {
+    if (close(pfds[0]) < 0) {           // exit pipe read end
         std::cerr << "Error: close failed for pfds[0]" << std::endl;
     }
-    if (close(pfds[1]) < 0) {
+    if (close(pfds[1]) < 0) {           // exit pipe write end
         std::cerr << "Error: close failed for pfds[1]" << std::endl;
     }
-
-    // close the command file
-    if (fclose(command_file) < 0) {
+    if (fclose(command_file) < 0) {     // command file
         std::cerr << "Error: close failed for command file" << std::endl;
     }
-
-    // close the sfd    
-    shutdown(sfd, SHUT_RDWR);
+    shutdown(sfd, SHUT_RDWR);           // socket
     if(close(sfd) < 0) {
         std::cerr << "Error: close failed for sfd" << std::endl;
     }
