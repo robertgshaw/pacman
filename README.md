@@ -21,6 +21,9 @@ Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows
     Demonstrate competancy with concurrent programming (threads, mutexes, condition variables)
     Demonstrate competancy with dockerizing applications
     Demonstrate familiarity with basic systems / networking concepts 
+    Demonstrate competancy with AWS
+    Demonstrate competancy with Docker + Containers
+    Demonstrate competancy with basic web app design
     Demonstrate competancy with object oriented programming and polymorphism
 
 ## Current status:
@@ -29,6 +32,11 @@ Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows
     The client side uses a command line interface using NCURSES as the UI. 
     The player moves around the board by clicking "awsd" and "q" to quit. 
     The server currently runs on the localhost.
+
+## Immediate Next Steps
+    1) Dockerize the server side application
+    2) Put server onto AWS + enable access over open internet (vs today via) - starting with EC2 to learn
+    3) Potentially, play around with ECS / EKS
 
 ## Longer Term Goals:
     1) Build out a browser based client - will use React for this
