@@ -32,6 +32,103 @@ using json = nlohmann::json;
 //      (B) Server listens to the changelog; when events pushed sends to client
 //          Events are of form      EVENT len=[int], body=[event]
 
+// void run_server(exit_pipe_fd)
+//      MAIN thread that handles an active game
+//      Listens for new client connections with accept() - once accepted, spins off a new connection
+//      Listens to the "exit pipe" simulataneously (with "select") - if signal, shutdown the connections + cleanup
+
+void run_server(int exit_pipe_fd) {
+
+    // initialize socket
+    std::cout << "Initializing socket ... ";    
+    int sfd = init_socket(port, max_players);
+    if (sfd == -1) {
+        std::cout << "[FAILED] ... Shutting down\n" << std::endl;
+        return;
+    } else {
+        std::cout << "[DONE] " << std::endl;
+    }
+    
+    // initialize the game
+    std::cout << "Initializing game ...";
+
+    // init game objects + connection objects
+    Game game_(board_size);
+    Exitpipe exitpipe_;                     
+    std::vector<std::thread> connections;
+
+    std::cout << "[DONE]" << std::endl;
+
+    // vars for the main loop below
+    struct sockaddr_in client;
+    socklen_t c = sizeof(struct sockaddr);
+    int player_id;
+    json board_json;
+
+    // vars for select
+    fd_set readfds;
+    int max_fd = sfd > exit_pipe_fd ? sfd : exit_pipe_fd;
+
+    // accept client connection + spin off connection threads until exit
+    bool is_exited = false;
+    while(!is_exited) {
+
+        // setup readfds set for select
+        FD_ZERO(&readfds);
+        FD_SET(exit_pipe_fd, &readfds);
+        FD_SET(sfd, &readfds);
+
+        // accept new connections
+        int r = select(max_fd + 1, &readfds, NULL, NULL, NULL);                
+        if (r < 0) {
+            std::cerr << "TODO: shutdown the board on error" << std::endl;      // TODO: make this a clean exit
+        } else if (r == 0) {
+            std::cerr << "TODO: shutdown the board on timeout:" << std::endl;   // TODO: make this a clean exit
+        } else if (FD_ISSET(exit_pipe_fd, &readfds)) {
+            is_exited = true;
+        } else {
+            assert(FD_ISSET(sfd, &readfds));
+            int cfd = accept(sfd, (sockaddr*) &client, &c);
+            if (cfd < 0) {
+                std::cerr << "Error: accept on sfd returned -1" << std::endl;   // TODO: make this a clean exit
+                close(cfd);
+                is_exited = true;
+            }
+
+            // add a new exit pipe pair
+            exitpipe_.add_fd_pair();
+            
+            // create player + launch connection threads
+            std::tie(player_id, board_json) = game_.handle_add_player(cfd);
+            connections.push_back(std::thread(handle_connection, cfd, exitpipe_.pop_reader_fd(), player_id, &game_, board_json));
+        }
+    } 
+
+    // send signal to the connection threads that it is time to close
+    exitpipe_.exit_all();
+
+    // join connection threads back together
+    for (std::thread & connection : connections) {
+        if (connection.joinable()) {
+            std::cout << "Joining thread " << connection.get_id() << "...";
+            connection.join();
+            std::cout << "[DONE]" << std::endl;
+        } else {
+            // should not get here, since we never detach or join otherwise
+            std::cerr << "Error: Thread " << connection.get_id() << " could not be joined" << std::endl;
+            assert(0 == 1);
+        }
+    }
+
+    // cleanup all the exit pipe resources
+    exitpipe_.close_all();
+
+    // cleanup the socket
+    shutdown(sfd, SHUT_RDWR);
+    if(close(sfd) < 0) {
+        std::cerr << "Error: close failed for sfd" << std::endl;
+    }
+}
 
 // void handle_connection(cfd, player_id, g_ptr, board_json)
 //      Does the following:
