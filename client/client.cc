@@ -29,7 +29,7 @@ int main(int argc , char *argv[]) {
 	// init and connect to socket
 	int sfd = init_socket(port, path); 
     if (sfd == -1) {
-		std::cerr << "Shutting down." << std::endl;
+		std::cerr << "Error: failed to init socket." << std::endl;
 		return 1;
 	}
 
@@ -41,7 +41,7 @@ int main(int argc , char *argv[]) {
 	// get the board from the server, reading BUFSIZ at a time
 	int n_read = recv(sfd, server_msg, BUFSIZ, 0); 
 	if (n_read < 0) {
-		std::cerr << " Shutting down." << std::endl;
+		std::cerr << "Error: recv failed." << std::endl;
 		close(sfd);
 		return 1;
 	}

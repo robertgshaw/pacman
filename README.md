@@ -6,14 +6,20 @@ Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows
     1. Run `docker image build -t server-p .` to build the server
     2. Run `docker run -p 6169:6169 server-p` to start the server
 
-    I have not yet build a way to terminate the server program + cleanup, so you will have to manually quit with "Ctrl-C"
-    You will need to manually stop the docker container to reopen the 6169 port, since force quitting does not stop the process.
-    As such, type `docker container ls`, which will give you the list of running containers. Note the ID of the server-p container
-    Type `docker container stop [ID]` to stop the container
+    type `exit` into the command prompt will update
+
+## Running the client: (not dockerized, since I am moving this to the browser)
+    Run `make client`
+    Run with `./client.out [IP addr] [Port]` --- the port you want is 6169. if running on localhost use 127.0.0.1 for the IP addr
+    Then, you should have an active client with ncurses.
+    This will ultimately be moved up to the browser.
+
+    You can open up multiple terminals and run in order to see multiple cleints connected to the game. 
 
 ## Project goal:
     Demonstrate competancy with C++ patterns and std
-    Demonstrate competancy with concurrent programming (threads, mutexes, cvs)
+    Demonstrate competancy with concurrent programming (threads, mutexes, condition variables)
+    Demonstrate competancy with dockerizing applications
     Demonstrate familiarity with basic systems / networking concepts 
     Demonstrate competancy with object oriented programming and polymorphism
 
@@ -25,10 +31,9 @@ Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows
     The server currently runs on the localhost.
 
 ## Longer Term Goals:
-    1) Build pacman features into the game
-    2) Allow server to hold multiple simultaneous games
-    3) Put Server onto AWS and actually run over the internet (vs localhost) 
-    4) Move the Client Side code into a browser
+    1) Build out a browser based client - will use React for this
+    2) Put onto AWS (did a proof of concept here with ECS + got it working); will ultimately move there
+    3) Build actual pacman features into the game
 
 ## Project Design
 ### Server:
@@ -37,21 +42,23 @@ Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows
     2) server_api.cc    Manages active client connections and implements the C/S communication protocol
     3) game.cc          Server Kernel that hold the data structures + implements the synchronization / message passing
     4) changelog.cc     Underlying data structure holding events that occur during the game
+    5) exitpipe.cc      Manages the exit pipes for each worker thread (2 per connection). Enables signal to shutdown if the sever commandprompt says "exit"
     5) shared/board.cc  Underlying data structre holding the shared state of the game
 
 ##### Server Functionality:
-    Concurrently do three things:
+    Concurrently do 4 things things:
     
     1) listens for client requests (across multiple simulatenous connections)
     2) process client request to update the shared state
     3) pushes the changes to all of the clients, who update the client side representaiton of the game
+    4) listens to the command line for server admin to type "exit" - in which case it sends a signal to exit all connections
     
     Each client connection is managed by the pair of threads
     We use an "event streaming" architectures to pass the updated state to the clients - where the clients are passed
         updates to the board + maintain their own representations of the games on the client side
 
 ##### Implementation:
-Each client connection is handled by a pair of threads using the Reader/Writer pattern with the socket. There are 2 shared data structures used to accomplish these actions, the synchrnization of which is managed by the Game class.
+Each client connection is handled by a pair of threads using the Reader/Writer pattern with blocking sockets. There are 2 shared data structures used to accomplish these actions, the synchrnization of which is managed by the Game class.
     
     Data Stuctures
     Board - this object holds the shared state of the game (under the covers it is a graph)
@@ -62,6 +69,8 @@ Each client connection is handled by a pair of threads using the Reader/Writer p
         sends to the socket (+ then client side updates state)
     "Reader Thread" --> listens to the socket for client requests (e.g. "move", "quit", "delete"); as 
         requests come in, update the board and log events in changelog
+
+Additionally, we have a server user which has access to the server command line, accepting commands from the user. So far, we have implemented "exit" as a command the server user can type to end the game. We use a series of pipes to signal the connection threads (2 per connection) to shutdown when exit occurs. The worker reader threads therefore block on select() rather than recv and we create an "exit" event which is processed by the changelog.
 
 ### Client:
 ##### The client code is decoupled into a few modules:
@@ -92,23 +101,3 @@ Each client connection is handled by a pair of threads using the Reader/Writer p
             and sends the events to the socket
         "Reader Thread" --> this thread listens to the socket for events; as events come in; the board is updated + the 
             controller passes changes to the board to the view 
-            
-## Running Instructions:
-Navigate to the pacman directory in a terminal
-1. Run `make server` to compile the server 
-2. Run `make client` to compile the client
-3. Run `./server.out` to launch the server (opens a socket on the localhost)
-
-Open a new terminal
-1. Run `./client.out` --> use awsd to move around the board; q to quit
-
-Open another terminal
-1. Run `./client.out` --> use awsd to move around the board; q to quit
-
-You can connect up to 5 terminals at once 
-You will see that both client terminals are connected to the same server and are updated
-
-## Docker
-I developed this project on a Windows laptop, using some infrastructure that CS61 at Harvard setup using Docker to launch a Linux OS inside a container. Utimately may plan to move project to an actual containerized enviornment, but the command I use on my laptop is below:
-
-`docker run --network="host" -it --rm -v C:\Users\rober\cs61-f20-psets-robertgshaw\pacman:/home/cs61-user/pacman cs61:latest`

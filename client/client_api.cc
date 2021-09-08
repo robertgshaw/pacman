@@ -26,7 +26,7 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 
 		if (send(sfd, msg.c_str(), msg.size(), 0) < 0)	{
 			c_ptr->set_quit();
-			ofs << "Send move request failed." << std::endl;
+			ofs << "Error: send move request failed." << std::endl;
 			return;
 		}
 
@@ -37,10 +37,8 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 	// if the user sent "q", send a quit request
 	c_ptr->set_quit();
 	std::string msg = format_client_quit_request();
-	ofs << "sending quit message: " << msg << std::endl;
-
 	if (send(sfd, msg.c_str(), msg.size(), 0) < 0)	{
-		ofs << "Send quit request failed." << std::endl;
+		ofs << "Error: send quit request failed." << std::endl;
 		return;
 	}
 
@@ -56,9 +54,7 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 void handle_changelog(int sfd, Controller* c_ptr) {
 
 	std::ofstream ofs;
-	char name[50];
-	int n = sprintf(name, "changelog_output_%d.txt", c_ptr->player_id);
-	ofs.open(name, std::ofstream::out | std::ofstream::app);
+	ofs.open("changelog.txt", std::ofstream::out | std::ofstream::app);
 
 	// loop, listening to the server for changelog updates
 	char server_msg[BUFSIZ];
@@ -95,6 +91,7 @@ void handle_changelog(int sfd, Controller* c_ptr) {
 		if(!handle_event(json::parse(event_str), c_ptr)) {
 			c_ptr->set_quit(); 
 			ofs << "ERROR: Event invalid." << std::endl;
+			ofs << "here" << std::endl;
 			ofs.close();
 			return;
 		}
@@ -106,6 +103,10 @@ void handle_changelog(int sfd, Controller* c_ptr) {
 //			(A) move:	moves the player in the board
 //			(B) add:	adds a new player to the board
 //			(C) quit:	removes a player from the board
+//			(D) exit: 	exits the game
+//		return value:
+//			true: json was a valid event
+//			false: json was an invalid event
 
 bool handle_event(json event_json, Controller* c_ptr) {
 
@@ -124,6 +125,12 @@ bool handle_event(json event_json, Controller* c_ptr) {
 	// (C) handle quit
 	if (event_json.find("quit") != event_json.end()) {
 		c_ptr->handle_event_quit(event_json["quit"]["pid"], event_json["quit"]["loc"]);
+		return true;
+	}
+
+	// (D) TODO: handle exit
+	if (event_json.find("quit") != event_json.end()) {
+		c_ptr->handle_event_exit();
 		return true;
 	}
 

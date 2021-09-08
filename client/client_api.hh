@@ -26,6 +26,17 @@ static const char* body_header =", body=";
 
 void handle_user_input(int sfd, Controller* c_ptr);
 void handle_changelog(int sfd, Controller* c_ptr);
+
+// bool handle_event(json event_json, Controller* c_ptr)
+//		handles the events from the raw json format, passing to the controller:
+//			(A) move:	moves the player in the board
+//			(B) add:	adds a new player to the board
+//			(C) quit:	removes a player from the board
+//			(D) exit: 	exits the game
+//		return value:
+//			true: json was a valid event
+//			false: json was an invalid event
+
 bool handle_event(nlohmann::json event_json, Controller* c_ptr);
 
 // int init socket
