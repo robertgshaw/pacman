@@ -11,31 +11,38 @@ class Event {
         virtual nlohmann::json get_json() = 0;
 
         // checks if the json form of the event is a quit for player_id 
-        static bool is_quit_event(int player_id, nlohmann::json e_json) {
-            if (e_json.find("quit") == e_json.end()) {
-                return false;
-            } else {
-                return e_json["quit"]["pid"] == player_id;
-            }
+        static bool is_exit_event(nlohmann::json e_json, int player_id) {
+            return (e_json.find("quit") != e_json.end() && e_json["quit"]["pid"] == player_id) 
+                || e_json.find("exit") != e_json.end();
         } 
 
         int player_id;
         int modifier;   
 };
 
+// player moves
 class Move : public Event {
     public:
         using Event::Event;
         nlohmann::json get_json();
 };
 
+// player added to game
 class Add : public Event {
     public:
         using Event::Event;
         nlohmann::json get_json();
 };
 
+// player quits the game
 class Quit : public Event {
+    public:
+        using Event::Event;
+        nlohmann::json get_json();
+};
+
+// game is exited
+class Exit : public Event {
     public:
         using Event::Event;
         nlohmann::json get_json();

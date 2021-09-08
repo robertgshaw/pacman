@@ -3,6 +3,7 @@
 
 #include <cstdio>
 #include <string>
+#include <unistd.h> // dirty evil hacking
 #include "../shared/nlohmann/json.hpp"
 
 #include "../shared/board.hh"
@@ -24,6 +25,7 @@ class Controller {
         void handle_event_move(int pid, int dir);
         void handle_event_add(int pid, int loc);
         void handle_event_quit(int pid, int loc);
+        void handle_event_exit();
 
         bool should_quit();
         void set_quit();

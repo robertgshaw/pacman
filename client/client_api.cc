@@ -11,7 +11,8 @@ using json = nlohmann::json;
 //			
 
 void handle_user_input(int sfd, Controller* c_ptr) { 	
-	freopen("output.txt", "w", stderr);
+	std::ofstream ofs;
+	ofs.open("user_input.txt", std::ofstream::out | std::ofstream::app);
 
 	// get move from the user
 	char key = c_ptr->get_next_move();
@@ -21,11 +22,11 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 		
 		// format message and send to server
 		std::string msg = format_client_move_request(key);
-		std::cerr << msg << std::endl;
+		ofs << msg.c_str() << std::endl;
 
 		if (send(sfd, msg.c_str(), msg.size(), 0) < 0)	{
 			c_ptr->set_quit();
-			std::cerr << "Send move request failed" << std::endl;
+			ofs << "Error: send move request failed." << std::endl;
 			return;
 		}
 
@@ -36,13 +37,12 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 	// if the user sent "q", send a quit request
 	c_ptr->set_quit();
 	std::string msg = format_client_quit_request();
-	std::cerr << msg << std::endl;
-
 	if (send(sfd, msg.c_str(), msg.size(), 0) < 0)	{
-		std::cerr << "Send quit request failed" << std::endl;
+		ofs << "Error: send quit request failed." << std::endl;
 		return;
 	}
 
+	ofs.close();
 	return;
 }
 
@@ -52,23 +52,31 @@ void handle_user_input(int sfd, Controller* c_ptr) {
 //		TODO: update to santize the raw server message
 
 void handle_changelog(int sfd, Controller* c_ptr) {
-	
+
+	std::ofstream ofs;
+	ofs.open("changelog.txt", std::ofstream::out | std::ofstream::app);
+
 	// loop, listening to the server for changelog updates
 	char server_msg[BUFSIZ];
 
 	// TOOD: update this to have some atomic that user is still connected
 	while(true) {
 
+		ofs << "before recv" << std::endl;
+
 		// read the message from the server
 		if (recv(sfd, server_msg, BUFSIZ, 0) <= 0) {
 			c_ptr->set_quit(); 
-			std::cerr << "ERROR: Read from server." << std::endl;
+			ofs << "ERROR: Read from server." << std::endl;
+			ofs.close();
 			return;
 		}
 		
 		// check if the UI has suggested that we should quit before
 		// if it has, then we will eventually get here (since user quitting is an event)
 		if (c_ptr->should_quit()) {
+			ofs << "quitting" << std::endl;
+			ofs.close();
 			return;
 		}
 		
@@ -77,9 +85,14 @@ void handle_changelog(int sfd, Controller* c_ptr) {
 		std::string event_str;
 		int n_left;
 		std::tie(event_str, n_left) = parse_message(server_msg, server_event_format, body_format, body_keyword_len);
+		
+		ofs << event_str << std::endl;
+
 		if(!handle_event(json::parse(event_str), c_ptr)) {
 			c_ptr->set_quit(); 
-			std::cerr << "ERROR: Event invalid." << std::endl;
+			ofs << "ERROR: Event invalid." << std::endl;
+			ofs << "here" << std::endl;
+			ofs.close();
 			return;
 		}
 	}
@@ -90,6 +103,10 @@ void handle_changelog(int sfd, Controller* c_ptr) {
 //			(A) move:	moves the player in the board
 //			(B) add:	adds a new player to the board
 //			(C) quit:	removes a player from the board
+//			(D) exit: 	exits the game
+//		return value:
+//			true: json was a valid event
+//			false: json was an invalid event
 
 bool handle_event(json event_json, Controller* c_ptr) {
 
@@ -111,6 +128,12 @@ bool handle_event(json event_json, Controller* c_ptr) {
 		return true;
 	}
 
+	// (D) TODO: handle exit
+	if (event_json.find("quit") != event_json.end()) {
+		c_ptr->handle_event_exit();
+		return true;
+	}
+
 	return false;
 }
 
@@ -124,7 +147,7 @@ bool handle_event(json event_json, Controller* c_ptr) {
 //      initializes and connects to socket
 //      returns a socket fd (if == -1, there was an error)
 
-int init_socket() {
+int init_socket(const int port, const char* path) {
     int sfd;
 	struct sockaddr_in server;
 	

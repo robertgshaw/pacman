@@ -1,4 +1,5 @@
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <sys/socket.h> // socket
 #include <arpa/inet.h>	// inet_addr
@@ -23,18 +24,26 @@ static const int body_keyword_len = 5;
 static const char* body_format = "body=";
 static const char* body_header =", body=";
 
-static const int port = 6169;
-static const char* path = "127.0.0.1";
-
 void handle_user_input(int sfd, Controller* c_ptr);
 void handle_changelog(int sfd, Controller* c_ptr);
+
+// bool handle_event(json event_json, Controller* c_ptr)
+//		handles the events from the raw json format, passing to the controller:
+//			(A) move:	moves the player in the board
+//			(B) add:	adds a new player to the board
+//			(C) quit:	removes a player from the board
+//			(D) exit: 	exits the game
+//		return value:
+//			true: json was a valid event
+//			false: json was an invalid event
+
 bool handle_event(nlohmann::json event_json, Controller* c_ptr);
 
 // int init socket
 //      wrapper around C socket syscalls
 //      initializes and connects to socket
 //      returns a sfd (if < 0, there was an error)
-int init_socket();
+int init_socket(const int port, const char* path);
 
 // std::String add_request_wrapper(std::string body_str)
 //		wrapes the body of the message in the correcet protocol

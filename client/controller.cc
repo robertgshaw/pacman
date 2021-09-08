@@ -82,6 +82,11 @@ void Controller::handle_event_quit(int pid, int loc) {
     view_.update_cell(loc, -1);
 }
 
+void Controller::handle_event_exit() {
+    // evil hack - the handle_user_request() thread is listening on getch(). so i write to stdin to get it to breakout
+    // since this code will be moved to js, i am just leaving this for the time being so i have a working commandline version
+    write(STDIN_FILENO, "q", 1);
+}
 
 // QUIT STATE
 //      gets and sets the "quit" state

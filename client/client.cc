@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdlib>
 #include <thread>
 #include <string>
 #include <tuple>
@@ -12,11 +13,23 @@
 using json = nlohmann::json;
 
 int main(int argc , char *argv[]) {
+	
+	// TODO - these need to be passes as arguments to init_socket()
+	int port;
+	char* path;
+
+	if (argc != 3) {
+		std::cout << "usage: ./client [server-ip] [port]" << std::endl;
+		return 0;
+	} else {
+		path = argv[1];
+		port = atoi(argv[2]);
+	}
 
 	// init and connect to socket
-	int sfd = init_socket(); 
+	int sfd = init_socket(port, path); 
     if (sfd == -1) {
-		std::cerr << "Shutting down." << std::endl;
+		std::cerr << "Error: failed to init socket." << std::endl;
 		return 1;
 	}
 
@@ -28,7 +41,7 @@ int main(int argc , char *argv[]) {
 	// get the board from the server, reading BUFSIZ at a time
 	int n_read = recv(sfd, server_msg, BUFSIZ, 0); 
 	if (n_read < 0) {
-		std::cerr << " Shutting down..." << std::endl;
+		std::cerr << "Error: recv failed." << std::endl;
 		close(sfd);
 		return 1;
 	}
