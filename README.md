@@ -50,37 +50,37 @@ This will ultimately be moved up to the browser. (have a branch focused on this 
 ## Project Design
 ### Server:
 ##### The server code is decoupled into a few modules:
-    1) server.cc        Entry code that listens for new connections
-    2) server_api.cc    Manages active client connections and implements the C/S communication protocol
-    3) game.cc          Server Kernel that hold the data structures + implements the synchronization / message passing
-    4) changelog.cc     Underlying data structure holding events that occur during the game
-    5) exitpipe.cc      Manages the exit pipes for each worker thread (2 per connection). Enables signal to shutdown if the sever commandprompt says "exit"
-    5) shared/board.cc  Underlying data structre holding the shared state of the game
+1) `server.cc`        Entry code that listens for new connections
+2) `server_api.cc`    Manages active client connections and implements the C/S communication protocol
+3) `game.cc`          Server Kernel that hold the data structures + implements the synchronization / message passing
+4) `changelog.cc`     Underlying data structure holding events that occur during the game
+5) `exitpipe.cc`      Manages the exit pipes for each worker thread (2 per connection). Enables signal to shutdown if the sever commandprompt says "exit"
+6) `shared/board.cc`  Underlying data structre holding the shared state of the game
 
 ##### Server Functionality:
-    Concurrently do 4 things things:
-    
-    1) listens for client requests (across multiple simulatenous connections)
-    2) process client request to update the shared state
-    3) pushes the changes to all of the clients, who update the client side representaiton of the game
-    4) listens to the command line for server admin to type "exit" - in which case it sends a signal to exit all connections
-    
-    Each client connection is managed by the pair of threads
-    We use an "event streaming" architectures to pass the updated state to the clients - where the clients are passed
-        updates to the board + maintain their own representations of the games on the client side
+Concurrently do 4 things things:
+
+1) listens for client requests (across multiple simulatenous connections)
+2) process client request to update the shared state
+3) pushes the changes to all of the clients, who update the client side representaiton of the game
+4) listens to the command line for server admin to type "exit" - in which case it sends a signal to exit all connections
+
+Each client connection is managed by the pair of threads
+We use an "event streaming" architectures to pass the updated state to the clients - where the clients are passed
+updates to the board + maintain their own representations of the games on the client side
 
 ##### Implementation:
 Each client connection is handled by a pair of threads using the Reader/Writer pattern with blocking sockets. There are 2 shared data structures used to accomplish these actions, the synchrnization of which is managed by the Game class.
     
-    Data Stuctures
-    Board - this object holds the shared state of the game (under the covers it is a graph)
-    Changelog - this object holds a queue of events that happens (move quit add) --- these changes are passed to the client as messages and are processed
+Data Stuctures
+`Board` - this object holds the shared state of the game (under the covers it is a graph)
+`Changelog` - this object holds a queue of events that happens (move quit add) --- these changes are passed to the client as messages and are processed
 
-    Threads 
-    "Writer Thread" --> listens to the changelog for new events happening; as events occur, 
-        sends to the socket (+ then client side updates state)
-    "Reader Thread" --> listens to the socket for client requests (e.g. "move", "quit", "delete"); as 
-        requests come in, update the board and log events in changelog
+Threads 
+`Writer Thread` --> listens to the changelog for new events happening; as events occur, 
+ sends to the socket (+ then client side updates state)
+`Reader Thread` --> listens to the socket for client requests (e.g. "move", "quit", "delete"); as 
+ requests come in, update the board and log events in changelog
 
 Additionally, we have a server user which has access to the server command line, accepting commands from the user. So far, we have implemented "exit" as a command the server user can type to end the game. We use a series of pipes to signal the connection threads (2 per connection) to shutdown when exit occurs. The worker reader threads therefore block on select() rather than recv and we create an "exit" event which is processed by the changelog.
 
