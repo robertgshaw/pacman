@@ -35,17 +35,14 @@ This will ultimately be moved up to the browser. (have a branch focused on this 
 6. Demonstrate competancy with basic web app design
 7. Demonstrate competancy with object oriented programming and polymorphism
 
-
-
 ## Immediate Next Steps
-1) Create landing page
-2) Put server onto AWS + enable access over open internet (vs today via) - starting with EC2 to learn
-3) Potentially, play around with ECS / EKS
+1) Create browser based client
+2) Put server into ECS on Amazon
 
 ## Longer Term Goals:
-    1) Build out a browser based client - will use React for this
-    2) Put onto AWS (did a proof of concept here with ECS + got it working); will ultimately move there
-    3) Build actual pacman features into the game
+1) Build out a browser based client - will use React for this
+2) Put onto AWS (did a proof of concept here with ECS + got it working); will ultimately move there
+3) Build actual pacman features into the game
 
 ## Project Design
 ### Server:
