@@ -2,11 +2,11 @@
 Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows.
 
 ## Running the server:
-    Uses docker to build application.
-    1. Run `docker image build -t server-p .` to build the server
-    2. Run `docker run -p 6169:6169 server-p` to start the server
+Uses docker to build application.
+1. Run `docker image build -t server-p .` to build the server
+2. Run `docker run -p 6169:6169 server-p` to start the server
 
-    type `exit` into the command prompt will update
+type `exit` into the command prompt will update
 
 ## Running the client: (not dockerized, since I am moving this to the browser)
     Run `make client`
