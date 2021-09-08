@@ -20,6 +20,14 @@
 //      as well as some basic wrappers around SYSCALL utilities 
 
 //
+// CONSTANTS for the game
+//
+
+static const int port = 6169;
+static const int board_size = 21;
+static const int max_players = 5;
+
+//
 //
 // ********** CLIENT SERVER API **********
 //
@@ -66,12 +74,12 @@ static const char* client_request_format = "REQUEST len=%d, body%c";
 static const char* client_body_request_format = "body=";
 static const int client_body_keyword_len = 5; 
 
-// void run_server(sfd, exit_pipe_fd)
+// void run_server(exit_pipe_fd)
 //      MAIN thread that handles an active game
 //      Listens for new client connections with accept() - once accepted, spins off a new connection
 //      Listens to the "exit pipe" simulataneously (with "select") - if signal, shutdown the connections + cleanup
 
-void run_server(int sfd, int exit_pipe_fd);
+void run_server(int exit_pipe_fd);
 
 // void handle_connection(cfd, exit_pipe_cfd, player_id, g_ptr, board_json)
 //      (1) Initializes client by sending across the board_json as is

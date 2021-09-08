@@ -32,21 +32,21 @@ using json = nlohmann::json;
 //      (B) Server listens to the changelog; when events pushed sends to client
 //          Events are of form      EVENT len=[int], body=[event]
 
-// void run_server(sfd, exit_pipe_fd)
+// void run_server(exit_pipe_fd)
 //      MAIN thread that handles an active game
 //      Listens for new client connections with accept() - once accepted, spins off a new connection
 //      Listens to the "exit pipe" simulataneously (with "select") - if signal, shutdown the connections + cleanup
 
-void run_server(int sfd, int exit_pipe_fd) {
+void run_server(int exit_pipe_fd) {
 
     // initialize socket
-    std::cout << "Initializing socket ...";    
+    std::cout << "Initializing socket ... ";    
     int sfd = init_socket(port, max_players);
     if (sfd == -1) {
         std::cout << "[FAILED] ... Shutting down\n" << std::endl;
-        return 1;
+        return;
     } else {
-        std::cout << "[DONE] ... Listening on port " << std::to_string(port) << std::endl;
+        std::cout << "[DONE] " << std::endl;
     }
     
     // initialize the game
@@ -122,6 +122,12 @@ void run_server(int sfd, int exit_pipe_fd) {
 
     // cleanup all the exit pipe resources
     exitpipe_.close_all();
+
+    // cleanup the socket
+    shutdown(sfd, SHUT_RDWR);
+    if(close(sfd) < 0) {
+        std::cerr << "Error: close failed for sfd" << std::endl;
+    }
 }
 
 // void handle_connection(cfd, player_id, g_ptr, board_json)

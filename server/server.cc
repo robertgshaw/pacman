@@ -9,10 +9,6 @@
 
 #include "server_api.hh"
 
-static const int port = 6169;
-static const int board_size = 21;
-static const int max_players = 5;
-
 using json = nlohmann::json;
 
 // ENTRY POINT
@@ -30,7 +26,7 @@ int main(int argc, char** argv) {
     }
 
     // spin off thread whcih processes the server
-    std::thread server_t  = std::thread(run_server, sfd, pfds[0]);
+    std::thread server_t  = std::thread(run_server, pfds[0]);
 
     // on the main thread, get input from user at the server command line
     FILE* command_file = stdin;
@@ -42,12 +38,12 @@ int main(int argc, char** argv) {
 
     while (!exited && !feof(command_file)) {
         
-        // print the prompt at the beginning of the line
-        if (needprompt) {
-            std::cout << "pacman$ ";
-            fflush(stdout);
-            needprompt = false;
-        }
+        // // print the prompt at the beginning of the line
+        // if (needprompt) {
+        //     std::cout << "pacman$ ";
+        //     fflush(stdout);
+        //     needprompt = false;
+        // }
 
         // read a string, checking for error or EOF
         if (fgets(&buf[bufpos], BUFSIZ - bufpos, command_file) == nullptr) {
@@ -90,10 +86,6 @@ int main(int argc, char** argv) {
     if (fclose(command_file) < 0) {     // command file
         std::cerr << "Error: close failed for command file" << std::endl;
     }
-    shutdown(sfd, SHUT_RDWR);           // socket
-    if(close(sfd) < 0) {
-        std::cerr << "Error: close failed for sfd" << std::endl;
-    }
-
+    
 	return 0;
 }
