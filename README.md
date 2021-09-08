@@ -1,5 +1,12 @@
 # Pacman: multiplayer version of pacman
-Project developed in Linux (Ubuntu distribution). Not tested for MacOS / Windows.
+This is a toy project setup to learn about concurrent systems (`C++`), web application design (`React`), containers (`docker`), cloud deployment (`AWS`).
+
+## Current status:
+The project currently allows multiple users to simultaneously connect to the server and move around a "Board" (the server is stateful given it is a live game)
+When a player makes a move, the state of the board is automatically updated on all of the clients connected to the game
+The client side uses a command line interface using NCURSES as the UI (currently in process of making this a broswer based game)
+The client moves around the board by clicking 'awsd' and 'q' to quit
+A user at the server's command line can write 'exit' and the game is shutdown, cleaning up resources
 
 ## Running the server:
 Uses docker to build application.
@@ -8,35 +15,32 @@ Uses docker to build application.
 
 type `exit` into the command prompt will update
 
-## Running the client: (not dockerized, since I am moving this to the browser)
-    Run `make client`
-    Run with `./client.out [IP addr] [Port]` --- the port you want is 6169. if running on localhost use 127.0.0.1 for the IP addr
-    Then, you should have an active client with ncurses.
-    This will ultimately be moved up to the browser.
+## Running the client: 
+The client is not dockerized, since I am moving this to the browser
+ 
+1. Run `make client` (I am using ubuntu)
+2. Run with `./client.out [IP addr] [Port]` --- the port you want is 6169. if running on localhost use 127.0.0.1 for the IP addr
 
-    You can open up multiple terminals and run in order to see multiple cleints connected to the game. 
+Then, you should have an active client with ncurses.
+You can open up multiple terminals and run in order to see multiple cleints connected to the game. 
+
+This will ultimately be moved up to the browser. (have a branch focused on this now)
 
 ## Project goal:
-    Demonstrate competancy with C++ patterns and std
-    Demonstrate competancy with concurrent programming (threads, mutexes, condition variables)
-    Demonstrate competancy with dockerizing applications
-    Demonstrate familiarity with basic systems / networking concepts 
-    Demonstrate competancy with AWS
-    Demonstrate competancy with Docker + Containers
-    Demonstrate competancy with basic web app design
-    Demonstrate competancy with object oriented programming and polymorphism
+1. Demonstrate competancy with C++ patterns and `std`
+2. Demonstrate competancy with concurrent programming (`thread`, `mutex`, `condition_variable`)
+3. Demonstrate competancy with `docker`
+4. Demonstrate familiarity with basic systems / networking concepts 
+5. Demonstrate competancy with AWS
+6. Demonstrate competancy with basic web app design
+7. Demonstrate competancy with object oriented programming and polymorphism
 
-## Current status:
-    The project currently allows multiple users to simultaneously connect to the server and move around a "Board". 
-    When a player makes a move, the state of the board is automatically updated on all of the clients connected to the game. 
-    The client side uses a command line interface using NCURSES as the UI. 
-    The player moves around the board by clicking "awsd" and "q" to quit. 
-    The server currently runs on the localhost.
+
 
 ## Immediate Next Steps
-    1) Dockerize the server side application
-    2) Put server onto AWS + enable access over open internet (vs today via) - starting with EC2 to learn
-    3) Potentially, play around with ECS / EKS
+1) Create landing page
+2) Put server onto AWS + enable access over open internet (vs today via) - starting with EC2 to learn
+3) Potentially, play around with ECS / EKS
 
 ## Longer Term Goals:
     1) Build out a browser based client - will use React for this
@@ -82,30 +86,30 @@ Additionally, we have a server user which has access to the server command line,
 
 ### Client:
 ##### The client code is decoupled into a few modules:
-    1) client.cc        Entry code that connects the client to the server
-    2) client_api.cc    Manages the active connection to the server and implements the C/S communication protocol
-    3) controller.cc    Client Kernel that holds the data structures and manages the view
-    4) view.cc          View which manages the NCURSES UI
-    5) shared/board.cc  Underlying data structure which holds the state of the game (model)
+1) `client.cc`          Entry code that connects the client to the server
+2) `client_api.cc`      Manages the active connection to the server and implements the C/S communication protocol
+3) `controller.cc`      Client Kernel that holds the data structures and manages the view
+4) `view.cc`            View which manages the NCURSES UI
+5) `shared/board.cc`    Underlying data structure which holds the state of the game (model)
 
-###### Client Functionality:
-    Concurrently do four things:
+###### Client Functionality
+Concurrently do three things:
     
-    1) listens for user input and send request to the server to update state
-    2) listen for events from the server and process them to update the client side board state 
-    3) update the user interface to match the model representation of the board
+1) listens for user input and send request to the server to update state
+2) listen for events from the server and process them to update the client side board state 
+3) update the user interface to match the model representation of the board
 
 ### Implementation:
-    Each client connection is managed by the pair of threads using the reader / write pattern
-    "Event streaming" architectures to pass the updated state to the clients, client responsible for maintaining client side representation of the game
+Each client connection is managed by the pair of threads using the reader / write pattern
+"Event driven" architectures to pass the updated state to the clients, client responsible for maintaining client side representation of the game
 
-    The client utilizes the MVC structure
-        The controller manages the game, utilizing two threads (reader/writer pattern)
-        The board is the model (underlying data structure) which holds the state of the game
-        The view is the visual interpretation of the model + gets necessary data updates passed from the controller
+The client utilizes the MVC structure
+    The controller manages the game, utilizing two threads (reader/writer pattern)
+    The board is the model (underlying data structure) which holds the state of the game
+    The view is the visual interpretation of the model + gets necessary data updates passed from the controller
 
-    The controller uses the reader/writer paradigm threads to manage the game:
-        "Writer Thread" --> this thread listens to the user input + wraps the user input in the C/S protocol 
-            and sends the events to the socket
-        "Reader Thread" --> this thread listens to the socket for events; as events come in; the board is updated + the 
-            controller passes changes to the board to the view 
+The controller uses the reader/writer paradigm threads to manage the game:
+    "Writer Thread" --> this thread listens to the user input + wraps the user input in the C/S protocol 
+        and sends the events to the socket
+    "Reader Thread" --> this thread listens to the socket for events; as events come in; the board is updated + the 
+        controller passes changes to the board to the view 
