@@ -1,3 +1,6 @@
+venv
+__pycache__
 *.out
 *.o
 *.txt
+!requirements.txt
