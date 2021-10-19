@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import './App.css';
+import SocketEcho from "./SocketEcho.js"
 
 function App() {
   const [currentTime, setCurrentTime] = useState(0);
@@ -12,17 +13,8 @@ function App() {
 
   return (
     <div className="App">
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="http://localhost:3000/api/game"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Join Game
-        </a>
-        <p>The current time is {currentTime}.</p>
-      </header>
+      <SocketEcho />
+      <p>The current time is {currentTime}.</p>
     </div>
   );
 }

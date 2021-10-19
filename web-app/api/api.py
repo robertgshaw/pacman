@@ -1,27 +1,24 @@
 import time
 from flask import Flask, render_template
-from flask_sock import Sock
+from flask_socketio import SocketIO, send
 
 app = Flask(__name__, static_folder='../build', static_url_path='/')
-sock = Sock(app)
+app.config['SECRET_KEY'] = 'mysecret'
 
-@app.route('/')
-def index():
-    return app.send_static_file('index.html')
+socketIo = SocketIO(app, cors_allowed_origins="*")
+
+app.debug = True
+app.host = 'localhost'
 
 @app.route('/api/time')
 def get_current_time():
     return {'time': time.time()}
 
-@sock.route('/api/echo')
-def echo(sock):
-    while True:
-        data = sock.receive()
-        print(len(data))
-        sock.send(data[::-1])
+@socketIo.on('message')
+def handleMessage(msg):
+    print(msg)
+    send(msg[::-1], broadcast=True)
+    return None
 
 if __name__ == '__main__':
-    app.run()
-
-
-
+    socketIo.run(app)
