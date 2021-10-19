@@ -1,0 +1,20 @@
+services:
+  api:
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile.api
+    image: pacman-web-app-app-api
+  client:
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile.client
+    image: pacman-web-app-client
+    ports:
+      - "3000:80"
+  game:
+    build:
+      context: ./game-server
+      dockerfile: Dockerfile.game-server
+    image: server-p
+    ports:
+      - "6169:6169"

@@ -37,13 +37,6 @@ int main(int argc, char** argv) {
     bool exited = false;
 
     while (!exited && !feof(command_file)) {
-        
-        // // print the prompt at the beginning of the line
-        // if (needprompt) {
-        //     std::cout << "pacman$ ";
-        //     fflush(stdout);
-        //     needprompt = false;
-        // }
 
         // read a string, checking for error or EOF
         if (fgets(&buf[bufpos], BUFSIZ - bufpos, command_file) == nullptr) {
