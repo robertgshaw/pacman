@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import './App.css';
-import SocketEcho from "./SocketEcho.js"
+import Game from "./Game.js"
 
 function App() {
   const [currentTime, setCurrentTime] = useState(0);
@@ -13,7 +13,7 @@ function App() {
 
   return (
     <div className="App">
-      <SocketEcho />
+      <Game />
       <p>The current time is {currentTime}.</p>
     </div>
   );
