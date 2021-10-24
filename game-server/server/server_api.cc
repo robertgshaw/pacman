@@ -182,18 +182,16 @@ void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, js
 
 void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
     
-    // loop conditions
-    bool is_exited = false;
-    
     // buffer to be filled by the socket reads
     char buf[BUFSIZ];
     memset(buf, '\0', BUFSIZ);
     char* buf_ptr = buf;
 
-    // request to be extracted
+    // request to be extracted in the loop
     std::string request;    
 
     // loop, handling requests until exit
+    bool is_exited = false;
     while (!is_exited) {
 
         // if there is data in the buffer waiting, parse request + handle if conforming API call
@@ -206,7 +204,7 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
 
         // if ther is no data in the buffer, check to see if a new message / exit command
         } else {
-            // reset buffer
+            // clear out buffer
             memset(buf, '\0', buf_ptr - buf);
             buf_ptr = buf;
 
