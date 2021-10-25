@@ -1,95 +1,118 @@
 import React, { useState, useEffect, useRef } from "react";
-import BoardState from "./client-board.js";
-import handleWebSocketEvent from "./client-api.js"
-import './Game.css';
+import { handleWebSocketEvent, formatClientRequest } from "./client-api.js";
+import { BoardView } from "./BoardView.js";
 
-const Square = (props) => {
-    return (
-        <button className="square">
-            {props.value}
-        </button>
-    ); 
-};
-
-const Board = (props) => {
-    const renderSquare = (i, j, boardWidth) => {
-        const index = i * boardWidth + j;
-        return (
-            <Square
-                key={"Square-"+index}
-                value={props.squares[index] === null ? "" : props.squares[index]}
-            />
-        );
-    };
-
-    let rows = [];
-    for (let i = 0; i < props.boardWidth; i++) {
-        let row = [];
-        for (let j = 0; j < props.boardWidth; j++) {
-            row.push(renderSquare(i, j, props.boardWidth));
-        }
-        rows.push(<div key={"boardRow-" + i} className="board-row">{row}</div>)
-    }
-    return rows;
-};
+// Game Component
+//      this component is the "Controller" of the MVC framework
+//      does three main items:
+//          (1) listens to WebSocket for Events from the server, passing to the API handler (w/ the model)
+//          (2) listens to the KeyBoard for User Moves, passing to the API handler (w/ the model)
+//          (3) holds the model (Board object) + view state (BoardView), triggering re-renderings on change
 
 const Game = () => {
 
-    let board_ = new BoardState(5);
-    const [squares, setSquares] = useState(board_.squares);
+    const [squares, setSquares] = useState([]);
 
     const ws = useRef(null);
+    const board = useRef(null);
+    const isActive = useRef(false);
 
+    // setup WebSocket, only call with ComponentWillMount
     useEffect(() => { 
         ws.current = new WebSocket("ws://localhost:27016");
         ws.current.binaryType = "arraybuffer";
         
-        ws.current.onopen   = () => console.log("ws opened");
-        ws.current.onclose  = () => console.log("ws closed");
+        ws.current.onopen   = () => console.log("WebSocket opened");
+        ws.current.onclose  = () => console.log("WebSocket closed");
         
         const wsCurrent = ws.current;
 
-        return () => {
-            wsCurrent.close();
+        // send quit message to server if still active + close the socket
+        return function cleanup() {
+            // note: we can safely call close more than once, since if socket already closed, it does nothing
+            //      per https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close 
+            quitGame();
+            wsCurrent.close(); // precaution in case ws.current is chaged
         };
 
     }, []);
 
+    // handles messages from WebSocket, passing to API handlers
     useEffect(() => {
         if (!ws.current) return;
+        ws.current.onmessage = (ev) => {
 
-        ws.current.onmessage = (ev) => handleWebSocketEvent(ev);
+            // pass event to API handler, updating the board
+            board.current = handleWebSocketEvent(board.current, ev);
+            
+            // if we got an exit message from server, turn off
+            if (board.current === 'exit') {
+                setSquares([]);
+                quitGame();
+
+            // if we got an error parsing the server message, quit + turn off
+            } else if (board.current === null) {
+                setSquares([]);
+                quitGame();
+
+            // otherwise, update the view state and re-render
+            } else {
+                isActive.current = true;
+                setSquares(board.current.nodes.slice());
+            }
+        }
     });
 
-    const handlePlayerInput = e => {
-        const keyPressed = e.key;
+    // handles UserCommand, passing to the API handlers
+    const handleKeyBoardEvent = (ev) => {
         let playerCommand = '';
-        console.log("Pressed: " + keyPressed);
-
-        switch (keyPressed) {
+        let isQuit = false;
+        const commandDict = {'a':'left', 'w':'up', 's':'down', 'd':'right'};
+        switch (ev.key) {
             case 'a':
-                playerCommand = 'left';
-                break;
             case 'w':
-                playerCommand = 'up';
+            case "s":
+            case "d":
+                playerCommand = commandDict[ev.key];
                 break;
-            case 's':
-                playerCommand = 'down';
-                break;
-            case 'd':
-                playerCommand = 'right';
+            case 'q':
+                playerCommand = 'quit';
+                isQuit = true;
                 break;
             default:
                 return;
         }
         
-        ws.current.send("{'message':'"+playerCommand+"'}");        
+        // if user input was a quit, send quit message to the server
+        if (isQuit) {
+            setSquares([]);
+            quitGame();
+
+        // otherwise, send the move message to the server
+        } else {
+            ws.current.send(formatClientRequest("move", playerCommand));
+        }
     };
+
+    // helper function
+    //      sends quit message to server if game is active
+    //      cleans up resources (isActive, ws, board)
+    const quitGame = () => {
+        if (isActive.current) {
+            console.log("sending quit to server");
+            ws.current.send(formatClientRequest("quit"));
+            isActive.current = false; 
+        }
+        console.log("closing socket");
+        ws.current.close();
+        board.current = null;
+    }
+
 
     return (
         <div>
-            <Board boardWidth={5} squares={squares}/>
-            <input name="playerRequest" onKeyDown={e => handlePlayerInput(e)} />
+            <BoardView boardWidth={board.current === null ? 0 : board.current.width} squares={squares}/>
+            <input name="userKeyBoardInput" onKeyDown={e => handleKeyBoardEvent(e)} />
         </div>
     );
 };

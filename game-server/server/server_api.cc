@@ -46,11 +46,11 @@ void run_server(int exit_pipe_fd) {
         std::cout << "[FAILED] ... Shutting down\n" << std::endl;
         return;
     } else {
-        std::cout << "[DONE] " << std::endl;
+        std::cout << "[DONE]" << std::endl;
     }
     
     // initialize the game
-    std::cout << "Initializing game ...";
+    std::cout << "Initializing game ... ";
 
     // init game objects + connection objects
     Game game_(board_size);
@@ -110,9 +110,7 @@ void run_server(int exit_pipe_fd) {
     // join connection threads back together
     for (std::thread & connection : connections) {
         if (connection.joinable()) {
-            std::cout << "Joining thread " << connection.get_id() << "...";
             connection.join();
-            std::cout << "[DONE]" << std::endl;
         } else {
             // should not get here, since we never detach or join otherwise
             std::cerr << "Error: Thread " << connection.get_id() << " could not be joined" << std::endl;
@@ -138,8 +136,7 @@ void run_server(int exit_pipe_fd) {
 //          (4) Rejoins together and frees the OS resources
 
 void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, json board_json) {
-
-    // create start json
+    
     json start_json;
     start_json["pid"] = player_id;
     start_json["board"] = board_json;
@@ -154,6 +151,8 @@ void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, js
         return;
     }
 
+    std::cout << "Opened connection for player_id: " << std::to_string(player_id) << std::endl;
+
     // (2) spin up thread to listen to changelog - writer to socket
     std::thread t(handle_changelog, cfd, player_id, g_ptr);
     
@@ -166,7 +165,8 @@ void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, js
     if(close(cfd) < 0) {
         std::cerr << "Error: close failed for player_id:" << std::to_string(player_id) << " on cfd:" << std::to_string(cfd) << std::endl;
     }
-
+    
+    std::cout << "Closed connection for player_id: " << std::to_string(player_id) << std::endl;
     return;
 }
 
@@ -240,6 +240,8 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
             }   
         }
     }
+
+    std::cout << "exiting handle_requests for player_id: " << std::to_string(player_id) << std::endl;
 
 }
 
@@ -353,16 +355,16 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
 //      will be of form BOARD len=[xxx], body=[board]...
 
 std::string format_server_msg(nlohmann::json command, const char* header, const char* body_header) {
-    // extract the body into string form
-    std::string body_str = command.dump();
+    // // extract the body into string form
+    // std::string body_str = command.dump();
 
-    // create the message to send
-    std::string msg = header;                       // COMMAND len=
-    msg.append(std::to_string(body_str.size()));    // COMMAND len=xxx
-    msg.append(body_header);                        // COMMAND len=xxx, body=
-    msg.append(body_str);                           // COMMAND len=xxx, body=abcdef...
+    // // create the message to send
+    // std::string msg = header;                       // COMMAND len=
+    // msg.append(std::to_string(body_str.size()));    // COMMAND len=xxx
+    // msg.append(body_header);                        // COMMAND len=xxx, body=
+    // msg.append(body_str);                           // COMMAND len=xxx, body=abcdef...
 
-    return msg;
+    return command.dump();
 }
 
 // is_valid_request_header(buf_ptr, len)

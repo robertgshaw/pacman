@@ -1,78 +1,155 @@
-const requestHeader = 'REQUEST len=';
-const bodyHeader = ', body={';
+import { Board, UP, DOWN, LEFT, RIGHT } from "./client-board.js";
 
-function arrayBufferToString(buffer) {
-    return String.fromCharCode.apply(null, new Uint8Array(buffer));
-  }
+// client-api.js
+//      this module contains the code for parsing messages from the server + passing to the handlers
+//      this module contains the code for creating requests to send to the server
 
-function handleWebSocketEvent(ev) {
-    
-    let msg = '';
-    if (ev.data instanceof Blob) {
-        console.log("Blob");
-        // const reader = new FileReader();
-        // reader.onload = () => {
-        //     msg = reader.result;
-        // };
-        // reader.readAsText(ev.data);
-    } else if (ev.data instanceof ArrayBuffer) {
-        console.log("ArrayBuffer");
+/*  *****************************************************************
+    *****************************************************************
+    ************************ FROM SERVER API ************************
+    *****************************************************************
+    ***************************************************************** */
+
+// handleWebSocketEvent(board, ev)
+//      handles the events from the raw json format, passing to the controller:
+//          (A) move:	moves the player in the board
+//			(B) add:	adds a new player to the board
+//			(C) quit:	removes a player from the board
+//			(D) exit: 	exits the game
+//
+//          parses the WebSocket event into the json message 
+//          passes the serverCommand JSON data to the server command handler
+//          returns an updated board object
+export function handleWebSocketEvent(board, ev) {    
+    if (ev.data instanceof ArrayBuffer) {
+        try {
+            return handleServerCommand(JSON.parse(arrayBufferToString(ev.data)), board);
+        } catch (e) {
+            console.log("ERROR: unable to parse JSON recieved from WebSocket.");
+            console.log(e);
+            return null;
+        }
     } else {
-        console.log("Other");
+        console.log("ERROR: messages from Socket is not of type ArrayBuffer.");
+        return null;
     }
-
-    msg = arrayBufferToString(ev.data);
-    console.log(msg);
-
-    // const obj = JSON.parse(msg);
-    // console.log(obj.stringify());
 }
 
-// REQUEST len=xx, body={"request":request}
-function formatRequest(requestType, requestValue) {
-    const bodyString = JSON.stringify({requestType:requestValue})
+// handleServerCommand(serverCommand, board)
+//      inteprets the command sent form the server and passes to the board state handler
+//      ultimately calls the model's update functionality
+//      returns the board in a new state
+function handleServerCommand(serverCommand, board) {
+    if (board === null && !('board' in serverCommand)) {
+        console.log("ERROR: board has not been intialized");
+        return null;
+
+    } else if ('board' in serverCommand) {
+        return handleInitCommand(serverCommand.board, board);
+
+    } else if ('move' in serverCommand) {
+        return handleCommand(serverCommand.move, board, 'pid', 'dir', (board_, playerId, dir) => {
+            const updatedBoard = board.movePlayer(playerId, dir);
+            return updatedBoard;
+        });
+
+    } else if ('add' in serverCommand) {
+        return handleCommand(serverCommand.add, board, 'pid', 'loc', (board_, playerId, loc) => {
+            const updatedBoard = board.addPlayer(playerId, loc);
+            return updatedBoard;
+        });
+
+    } else if ('quit' in serverCommand) {
+        return handleCommand(serverCommand.quit, board, 'pid', 'loc', (board_, playerId, loc) => {
+            const updatedBoard = board.removePlayer(playerId, loc);
+            return updatedBoard;
+        });
+
+    } else if ('exit' in serverCommand) {
+        return 'exit';
+
+    } else {
+        console.log("ERROR: unknown command recieved from the server");
+        return null;
+    }
+}
+
+function handleInitCommand(boardCommand, board) {
+    if (board === null) {
+        return new Board(boardCommand);
+
+    } else {
+        console.log("ERROR: board has already been initialized.");
+        return null;
+    }
+}
+
+function handleCommand(command, board, jsonKey1, jsonKey2, handler) {
+    if (!(jsonKey1 in command) || !(jsonKey2 in command)) {
+        console.log("ERROR: command has unexpected format");
+        return null;
+
+    } else {
+        return handler(board, command[jsonKey1], command[jsonKey2]);
+    }
+}
+
+/*  *****************************************************************
+    *****************************************************************
+    ************************ TO SERVER API ************************
+    *****************************************************************
+    ***************************************************************** */
+
+// formatClientRequest(requestType, modifier)
+//      formats the client request into the protocol API which is of form:
+//      REQUEST len=xx, body={"requestType":request}
+
+//      "move" --- formatClientRequest("move", ["right", "up", "left", "down"])
+//      "quit" --- formatClientRequest("quit")
+export function formatClientRequest(requestType, modifier=1) {        
+    
+    let requestValue = null;
+
+    if (requestType === "quit") {
+        requestValue = 1;
+    } 
+    
+    else if (requestType === "move") {
+        switch(modifier) {
+            case "up":
+                requestValue = UP;
+                break;
+            case "right":
+                requestValue = RIGHT;
+                break;
+            case "down":
+                requestValue = DOWN;
+                break;
+            case "left":
+                requestValue = LEFT;
+                break;
+            default:
+                console.log("ERROR: invalid move direction");
+                return null;
+        }
+    } 
+    
+    else {
+        console.log("ERROR: invalid client request type.");
+        return null;
+    }
+
+    const requestHeader = 'REQUEST len=';
+    const bodyHeader = ', body=';
+
+    let bodyJSON = {};
+    bodyJSON[requestType] = requestValue;
+    const bodyString = JSON.stringify(bodyJSON);
     return requestHeader + bodyString.length + bodyHeader + bodyString;   
 }
 
-function formatRequestMove(direction) {
-    return formatRequest("move", direction);
+// arrayBufferToString(buffer) 
+//      helper function translates binary data to string
+function arrayBufferToString(buffer) {
+    return String.fromCharCode.apply(null, new Uint8Array(buffer));
 }
-
-function formatRequestQuit() {
-    return formatRequest("quit", 1);
-}
-
-function handleEvent(board, event) {
-    
-    // if valid move event, return new state updated for the move
-    if ('move' in event && 'pid' in event['move'] && 'loc' in  event['move'] && 'dir' in event['move']) {
-        return handleEventMove(board, event['move']['pid'], event['move']['loc'], event['move']['dir']);
-    } 
-    
-    // if valid add event, return new state  updated for the add
-    else if ('add' in event && 'pid' in event['add'] && 'loc' in event['add']) {
-        return handleEventAdd(board, event['add']['pid'], event['add']['loc']);
-    } 
-    
-    // if valid quit event, return new state updated for the quit
-    else if ('quit' in event && 'pid' in event['quit'] && 'loc' in event['quit']) {
-        return handleEventQuit(board, event['quit']['pid'], event['quit']['loc']);
-    } 
-
-    console.log("invalid event, not updating");
-    return board;
-}
-
-function handleEventMove(board, playerId, location, direction) {
-    board.movePlayer(playerId, location, direction);
-}
-
-function handleEventAdd(board, playerId, location) {
-    board.addPlayer(playerId, location);
-}
-
-function handleEventQuit(board, playerId, location) {
-    
-}
-
-export { handleWebSocketEvent as default }
