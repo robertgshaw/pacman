@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import BoardState from "./client-board.js";
-// import handleEvent from "client-api.js"
+import handleWebSocketEvent from "./client-api.js"
 import './Game.css';
 
 const Square = (props) => {
@@ -12,20 +12,25 @@ const Square = (props) => {
 };
 
 const Board = (props) => {
-    const renderSquare = (i) => {
+    const renderSquare = (i, j, boardWidth) => {
+        const index = i * boardWidth + j;
         return (
             <Square
-                key={i}
-                value={props.squares[i] === null ? "" : props.squares[i]}
+                key={"Square-"+index}
+                value={props.squares[index] === null ? "" : props.squares[index]}
             />
         );
     };
 
-    return (
-        <div>
-            {props.squares.map((sq,i) => renderSquare(i))}
-        </div>
-    );     
+    let rows = [];
+    for (let i = 0; i < props.boardWidth; i++) {
+        let row = [];
+        for (let j = 0; j < props.boardWidth; j++) {
+            row.push(renderSquare(i, j, props.boardWidth));
+        }
+        rows.push(<div key={"boardRow-" + i} className="board-row">{row}</div>)
+    }
+    return rows;
 };
 
 const Game = () => {
@@ -36,7 +41,8 @@ const Game = () => {
     const ws = useRef(null);
 
     useEffect(() => { 
-        ws.current = new WebSocket("ws://localhost:27016")
+        ws.current = new WebSocket("ws://localhost:27016");
+        ws.current.binaryType = "arraybuffer";
         
         ws.current.onopen   = () => console.log("ws opened");
         ws.current.onclose  = () => console.log("ws closed");
@@ -52,10 +58,7 @@ const Game = () => {
     useEffect(() => {
         if (!ws.current) return;
 
-        ws.current.onmessage = msg => {
-            const incomingMessage = `Message from WebSocket: ${msg.data}`;
-            console.log(incomingMessage);
-        }
+        ws.current.onmessage = (ev) => handleWebSocketEvent(ev);
     });
 
     const handlePlayerInput = e => {
@@ -80,12 +83,12 @@ const Game = () => {
                 return;
         }
         
-        ws.current.send("message", playerCommand);        
+        ws.current.send("{'message':'"+playerCommand+"'}");        
     };
 
     return (
         <div>
-            <Board squares={squares}/>
+            <Board boardWidth={5} squares={squares}/>
             <input name="playerRequest" onKeyDown={e => handlePlayerInput(e)} />
         </div>
     );

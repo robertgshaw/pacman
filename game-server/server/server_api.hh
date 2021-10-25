@@ -23,7 +23,7 @@
 // CONSTANTS for the game
 //
 
-static const int port = 6169;
+static const int port = 5000;
 static const int board_size = 21;
 static const int max_players = 5;
 

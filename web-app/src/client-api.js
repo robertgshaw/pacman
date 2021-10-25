@@ -1,6 +1,33 @@
 const requestHeader = 'REQUEST len=';
 const bodyHeader = ', body={';
 
+function arrayBufferToString(buffer) {
+    return String.fromCharCode.apply(null, new Uint8Array(buffer));
+  }
+
+function handleWebSocketEvent(ev) {
+    
+    let msg = '';
+    if (ev.data instanceof Blob) {
+        console.log("Blob");
+        // const reader = new FileReader();
+        // reader.onload = () => {
+        //     msg = reader.result;
+        // };
+        // reader.readAsText(ev.data);
+    } else if (ev.data instanceof ArrayBuffer) {
+        console.log("ArrayBuffer");
+    } else {
+        console.log("Other");
+    }
+
+    msg = arrayBufferToString(ev.data);
+    console.log(msg);
+
+    // const obj = JSON.parse(msg);
+    // console.log(obj.stringify());
+}
+
 // REQUEST len=xx, body={"request":request}
 function formatRequest(requestType, requestValue) {
     const bodyString = JSON.stringify({requestType:requestValue})
@@ -33,7 +60,7 @@ function handleEvent(board, event) {
     } 
 
     console.log("invalid event, not updating");
-    return squares;
+    return board;
 }
 
 function handleEventMove(board, playerId, location, direction) {
@@ -48,4 +75,4 @@ function handleEventQuit(board, playerId, location) {
     
 }
 
-export { handleEvent }
+export { handleWebSocketEvent as default }
