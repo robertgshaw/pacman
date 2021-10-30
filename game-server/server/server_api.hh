@@ -23,7 +23,7 @@
 // CONSTANTS for the game
 //
 
-static const int port = 6169;
+static const int port = 5000;
 static const int board_size = 21;
 static const int max_players = 5;
 
@@ -73,6 +73,10 @@ static const char* start_body_header =", body=";
 static const char* client_request_format = "REQUEST len=%d, body%c";
 static const char* client_body_request_format = "body=";
 static const int client_body_keyword_len = 5; 
+
+// constants that enable server side "exit" / "quit" requests on errors
+static const nlohmann::json exit_request = {{ "exit" , 1 }};
+static const nlohmann::json quit_request = {{ "quit" , 1 }}; 
 
 // void run_server(exit_pipe_fd)
 //      MAIN thread that handles an active game

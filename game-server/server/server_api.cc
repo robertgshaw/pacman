@@ -46,11 +46,11 @@ void run_server(int exit_pipe_fd) {
         std::cout << "[FAILED] ... Shutting down\n" << std::endl;
         return;
     } else {
-        std::cout << "[DONE] " << std::endl;
+        std::cout << "[DONE]" << std::endl;
     }
     
     // initialize the game
-    std::cout << "Initializing game ...";
+    std::cout << "Initializing game ... ";
 
     // init game objects + connection objects
     Game game_(board_size);
@@ -78,14 +78,18 @@ void run_server(int exit_pipe_fd) {
         FD_SET(exit_pipe_fd, &readfds);
         FD_SET(sfd, &readfds);
 
-        // accept new connections
+        // accept new connections / listen for exit_pipe
         int r = select(max_fd + 1, &readfds, NULL, NULL, NULL);                
         if (r < 0) {
             std::cerr << "TODO: shutdown the board on error" << std::endl;      // TODO: make this a clean exit
         } else if (r == 0) {
             std::cerr << "TODO: shutdown the board on timeout:" << std::endl;   // TODO: make this a clean exit
+
+        // if there is a signal in the exit pipe
         } else if (FD_ISSET(exit_pipe_fd, &readfds)) {
             is_exited = true;
+
+        // if there was a new socket connection
         } else {
             assert(FD_ISSET(sfd, &readfds));
             int cfd = accept(sfd, (sockaddr*) &client, &c);
@@ -110,9 +114,7 @@ void run_server(int exit_pipe_fd) {
     // join connection threads back together
     for (std::thread & connection : connections) {
         if (connection.joinable()) {
-            std::cout << "Joining thread " << connection.get_id() << "...";
             connection.join();
-            std::cout << "[DONE]" << std::endl;
         } else {
             // should not get here, since we never detach or join otherwise
             std::cerr << "Error: Thread " << connection.get_id() << " could not be joined" << std::endl;
@@ -123,6 +125,7 @@ void run_server(int exit_pipe_fd) {
     // cleanup all the exit pipe resources
     exitpipe_.close_all();
 
+    std::cout << "Closing sfd" << std::endl;
     // cleanup the socket
     shutdown(sfd, SHUT_RDWR);
     if(close(sfd) < 0) {
@@ -138,8 +141,7 @@ void run_server(int exit_pipe_fd) {
 //          (4) Rejoins together and frees the OS resources
 
 void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, json board_json) {
-
-    // create start json
+    
     json start_json;
     start_json["pid"] = player_id;
     start_json["board"] = board_json;
@@ -154,6 +156,8 @@ void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, js
         return;
     }
 
+    std::cout << "Opened connection for player_id: " << std::to_string(player_id) << std::endl;
+
     // (2) spin up thread to listen to changelog - writer to socket
     std::thread t(handle_changelog, cfd, player_id, g_ptr);
     
@@ -166,7 +170,8 @@ void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, js
     if(close(cfd) < 0) {
         std::cerr << "Error: close failed for player_id:" << std::to_string(player_id) << " on cfd:" << std::to_string(cfd) << std::endl;
     }
-
+    
+    std::cout << "Closed connection for player_id: " << std::to_string(player_id) << std::endl;
     return;
 }
 
@@ -182,31 +187,32 @@ void handle_connection(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr, js
 
 void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
     
-    // loop conditions
-    bool is_exited = false;
-    
     // buffer to be filled by the socket reads
     char buf[BUFSIZ];
     memset(buf, '\0', BUFSIZ);
     char* buf_ptr = buf;
 
-    // request to be extracted
+    // request to be extracted in the loop
     std::string request;    
 
     // loop, handling requests until exit
+    bool is_exited = false;
     while (!is_exited) {
 
         // if there is data in the buffer waiting, parse request + handle if conforming API call
         if (!is_empty_buf(buf_ptr)) {
+            
+            // parse and handle request, exiting if a quit or an exit command
             if (parse_request(buf_ptr, request)) {
-                handle_request(json::parse(request), cfd, player_id, g_ptr);
+                is_exited = handle_request(json::parse(request), cfd, player_id, g_ptr);
             } else {
-                is_exited = true;
+                is_exited = handle_request(quit_request, cfd, player_id, g_ptr);
+                assert(is_exited == true);
             }
 
-        // if ther is no data in the buffer, check to see if a new message / exit command
+        // if there is no data in the buffer, check to see if a new message / exit command
         } else {
-            // reset buffer
+            // clear out buffer
             memset(buf, '\0', buf_ptr - buf);
             buf_ptr = buf;
 
@@ -219,29 +225,31 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
             // wait until either there is data from the cfd socket OR from the exit signal pipe
             int r = select((cfd > exit_pipe_fd ? cfd : exit_pipe_fd) + 1, &readfds, NULL, NULL, NULL);
             if (r < 0) {
-                std::cerr << "Error: select in handle_requests returned an error." << std::endl;
+                std::cerr << "Error: select in handle_requests returned an error" << std::endl;
                 is_exited = true;
             } else if (r = 0) {
-                std::cerr << "Error: select in handle_request timed out." << std::endl;
+                std::cerr << "Error: select in handle_request timed out" << std::endl;
                 is_exited = true;
             } else {
 
                 // if we got a signal in the exit_pipe_cfd, publish an exit request to changelog and exit
                 if (FD_ISSET(exit_pipe_fd, &readfds)) {
-                    json exit_request = { { "exit", 1 } };
-                    handle_request(exit_request, cfd, player_id, g_ptr);
-                    is_exited = true;
+                    is_exited = handle_request(exit_request, cfd, player_id, g_ptr);
+                    assert(is_exited == true);
                 
                 // if we got a signal from the socket, read from socket into the buffer, exiting if there is nothing / an error
                 } else {
                     assert(FD_ISSET(cfd, &readfds));
                     if (!read_from_socket(cfd, buf_ptr, BUFSIZ)) {
-                        is_exited = true;
+                        is_exited = handle_request(quit_request, cfd, player_id, g_ptr);
+                        assert(is_exited == true);
                     }
                 }
             }   
         }
     }
+
+    std::cout << "exiting handle_requests for player_id: " << std::to_string(player_id) << std::endl;
 
 }
 
@@ -251,6 +259,7 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
 //          1)  "move":"dir" ---> dir = up, down, left, right (moves the player on the board)
 //          2)  "quit":1     ---> 1 = value for protocol consistency (removes the player from the board) 
 //          3)  "exit":1     ---> 1 = value for protocol consistency (removes the player from the board)
+//      Returns true if the request was a quit / exit command
 
 bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
 
@@ -258,25 +267,25 @@ bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
     
     // (1) handle move
     if (request.find("move") != request.end()) {
-        // TODO: handle badly formed json
         int dir = request["move"];
         if (dir == UP || dir == DOWN || dir == LEFT || dir == RIGHT) {
             g_ptr->handle_request_move(player_id, dir);
-        }        
+        }    
     }
 
     // (2) handle quit
     if (request.find("quit") != request.end()) {
         g_ptr->handle_request_quit(player_id);
-        is_quit = true;
+        return true;
 	}
 
     // (3) handle exit command
     if (request.find("exit") != request.end()) {
         g_ptr->handle_request_exit(player_id);
+        return true;
 	}
-    
-    return is_quit;
+
+    return false;
 }
 
 // bool parse_request(buf_ptr, request)
@@ -310,7 +319,7 @@ bool parse_request(char*& buf_ptr, std::string& request) {
             return false;
         }
 
-    // if the request does not conform to the API, exit (TODO: do something better here)
+    // if the request does not conform to the API, pass error
     } else {
         std::cerr << "Error: request does not conform to the API for client" << std::endl;
         return false;
@@ -337,9 +346,11 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
 
         // if it is a exit / quit event, return (joining the changelog thread back to client connection thread)
         if (g_ptr->is_exit_event(e_json, player_id)) {
-            return;
+            is_connected = false;
         }
     }
+
+    std::cout << "exiting handle_changelog for player_id: " << std::to_string(player_id) << std::endl;
 
     return;
 }
@@ -355,16 +366,16 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
 //      will be of form BOARD len=[xxx], body=[board]...
 
 std::string format_server_msg(nlohmann::json command, const char* header, const char* body_header) {
-    // extract the body into string form
-    std::string body_str = command.dump();
+    // // extract the body into string form
+    // std::string body_str = command.dump();
 
-    // create the message to send
-    std::string msg = header;                       // COMMAND len=
-    msg.append(std::to_string(body_str.size()));    // COMMAND len=xxx
-    msg.append(body_header);                        // COMMAND len=xxx, body=
-    msg.append(body_str);                           // COMMAND len=xxx, body=abcdef...
+    // // create the message to send
+    // std::string msg = header;                       // COMMAND len=
+    // msg.append(std::to_string(body_str.size()));    // COMMAND len=xxx
+    // msg.append(body_header);                        // COMMAND len=xxx, body=
+    // msg.append(body_str);                           // COMMAND len=xxx, body=abcdef...
 
-    return msg;
+    return command.dump();
 }
 
 // is_valid_request_header(buf_ptr, len)
@@ -394,7 +405,9 @@ bool read_from_socket(int cfd, char* buf_ptr, int sz) {
     
     // if error reading from socket, print error and return
     if (r < 0) {
-        std::cerr << "Error: bad reading from socket " << std::to_string(cfd) << std::endl;
+        std::cerr << "Error: error reading from socket" << std::endl;
+    } else if (r == 0) {
+        std::cout << "Client closed the socket connection" << std::endl;
     }
     
     return r > 0;
