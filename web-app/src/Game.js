@@ -99,19 +99,24 @@ const Game = () => {
     //      cleans up resources (isActive, ws, board)
     const quitGame = () => {
         if (isActive.current) {
-            console.log("sending quit to server");
             ws.current.send(formatClientRequest("quit"));
             isActive.current = false; 
         }
-        console.log("closing socket");
         ws.current.close();
         board.current = null;
     }
 
+    const displayBoard = () => {
+        if (board.current === null) {
+            return <BoardView boardWidth={0} squares={squares} activePlayer={0}/>
+        } else {
+            return <BoardView boardWidth={board.current.width} squares={squares} activePlayer={board.current.activePlayer}/>
+        }
+    }
 
     return (
         <div>
-            <BoardView boardWidth={board.current === null ? 0 : board.current.width} squares={squares}/>
+            {displayBoard()}
             <input name="userKeyBoardInput" onKeyDown={e => handleKeyBoardEvent(e)} />
         </div>
     );

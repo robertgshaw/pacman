@@ -2,12 +2,28 @@ import React from "react";
 import './BoardView.css';
 
 export const BoardView = (props) => {
+    
+    const getSquareBackgroundColor = (squareType, playerId, activePlayer) => {
+        switch(squareType) {
+            case "blocked": 
+                return "background-gray";
+            default:
+                if(playerId === activePlayer) {
+                    return "background-yellow";
+                } else {
+                    return "background-white";
+                }
+        }
+    };
+
     const renderSquare = (i, j, width) => {
         const index = i * width + j;
+        const playerId = props.squares[index].playerId;
         return (
             <SquareView
                 key={"Square-"+index}
-                value={props.squares[index].playerId === -1 ? "" : props.squares[index].playerId}
+                value={playerId === -1 ? "" : playerId}
+                backgroundColor={getSquareBackgroundColor(props.squares[index].type, playerId, props.activePlayer)}
             />
         );
     };
@@ -24,8 +40,9 @@ export const BoardView = (props) => {
 };
 
 const SquareView = (props) => {
+
     return (
-        <button className="square">
+        <button className={"square " + props.backgroundColor}>
             {props.value}
         </button>
     ); 

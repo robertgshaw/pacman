@@ -45,7 +45,7 @@ function handleServerCommand(serverCommand, board) {
         return null;
 
     } else if ('board' in serverCommand) {
-        return handleInitCommand(serverCommand.board, board);
+        return handleInitCommand(serverCommand.board, serverCommand.pid, board);
 
     } else if ('move' in serverCommand) {
         return handleCommand(serverCommand.move, board, 'pid', 'dir', (board_, playerId, dir) => {
@@ -74,9 +74,9 @@ function handleServerCommand(serverCommand, board) {
     }
 }
 
-function handleInitCommand(boardCommand, board) {
+function handleInitCommand(boardCommand, activePlayer, board) {
     if (board === null) {
-        return new Board(boardCommand);
+        return new Board(boardCommand, activePlayer);
 
     } else {
         console.log("ERROR: board has already been initialized.");

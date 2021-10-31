@@ -15,23 +15,22 @@ class Board {
     //      initializes a BoardState object from the json description of the board
     //      invariant that boardJSON is well formatted
     //      call 'validate JSON' before constructor to check things work
-    constructor(boardJSON) {    
+    constructor(boardJSON, activePlayer) {  
+        this.activePlayer = activePlayer;
         this.nPlayers = boardJSON.n_players;
         this.width = boardJSON.width;
     
         this.nodes = boardJSON.nodes.map((node) => {
             let obj = {};
             obj.playerId = node.player_id;
-            obj.type = node.type;
+            obj.type = node.type === 4 ? "blocked" : "active";
             return obj;
         });
 
         this.playerLocations = Array(this.nPlayers).fill(null);
-        let count = 0;
         for (let i = 0; i < this.nodes.length; i++) {
             if (this.nodes[i].playerId !== EMPTY) {
                 this.playerLocations[this.nodes[i].playerId] = i;
-                count++;
             }
         }
     }
@@ -57,7 +56,7 @@ class Board {
     }
 
     // removePlayer(playerId, loc)
-    //      remopves player [id] at location [loc] from the game, checking to make sure loc was correct
+    //      removes player [id] at location [loc] from the game, checking to make sure loc was correct
     removePlayer(playerId, loc) {
         if (this.playerLocations.length !== this.nPlayers) {
             console.log("ERROR: playerLocations length out of sync with nPlayers count");
@@ -94,7 +93,7 @@ class Board {
     }
 
     // movePlayer(playerId, dir)
-    //      moves player [id] from location [loc] in direction [UP, DOWN, LEFT, RIGHT
+    //      moves player [id] from location [loc] in direction [UP, DOWN, LEFT, RIGHT]
     movePlayer(playerId, dir) {
         let loc = this.playerLocations[playerId];
         switch(dir) {

@@ -249,8 +249,6 @@ void handle_requests(int cfd, int exit_pipe_fd, int player_id, Game* g_ptr) {
         }
     }
 
-    std::cout << "exiting handle_requests for player_id: " << std::to_string(player_id) << std::endl;
-
 }
 
 // void handle_request(request, cfd, player_id, g_ptr) 
@@ -349,8 +347,6 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
             is_connected = false;
         }
     }
-
-    std::cout << "exiting handle_changelog for player_id: " << std::to_string(player_id) << std::endl;
 
     return;
 }
