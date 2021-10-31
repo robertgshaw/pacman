@@ -13,9 +13,10 @@ using json = nlohmann::json;
 //      called on the server side
 
 void Board::init_graph(int w) {
-    assert( w > 10 );
-    assert (w % 2 == 1);
+    assert(w > 10);
+    assert(w % 2 == 1);
     width = w;
+    pacman_id = NO_PACMAN_ID_SET;
 
     nodetype t;
     int y, x;
@@ -29,7 +30,7 @@ void Board::init_graph(int w) {
         } else if ((x == w/4 || x == w/4 + 1 || x == w/2 || x == 3*w/4 || x == 3*w/4 + 1) && (y != 1 && y != w-2)) {
             t = blocked;
         } else {
-            t = open;
+            t = coin;
         }
 
         // add to node_arr
@@ -47,7 +48,7 @@ void Board::init_graph(int w) {
             nodes[i].adj[UP] = EMPTY;
         } else { 
             loc = get_loc(y - 1, x);
-            nodes[i].adj[UP] = nodes[loc].type == blocked ? EMPTY : loc;
+            nodes[i].adj[UP] = nodes[loc].node_type == blocked ? EMPTY : loc;
         }
 
         // right edge
@@ -55,7 +56,7 @@ void Board::init_graph(int w) {
             nodes[i].adj[RIGHT] = EMPTY;
         } else {
             loc = get_loc(y, x + 1);
-            nodes[i].adj[RIGHT] = nodes[loc].type == blocked ? EMPTY : loc;
+            nodes[i].adj[RIGHT] = nodes[loc].node_type == blocked ? EMPTY : loc;
         }
 
         // down edge
@@ -63,7 +64,7 @@ void Board::init_graph(int w) {
             nodes[i].adj[DOWN] = EMPTY;
         } else {
             loc = get_loc(y + 1, x);
-            nodes[i].adj[DOWN] = nodes[loc].type == blocked ? EMPTY : loc;
+            nodes[i].adj[DOWN] = nodes[loc].node_type == blocked ? EMPTY : loc;
         }
 
         // left edge
@@ -71,7 +72,7 @@ void Board::init_graph(int w) {
             nodes[i].adj[LEFT] = EMPTY;
         } else {
             loc = get_loc(y, x - 1);
-            nodes[i].adj[LEFT] = nodes[loc].type == blocked ? EMPTY : loc;
+            nodes[i].adj[LEFT] = nodes[loc].node_type == blocked ? EMPTY : loc;
         }
     }
 }
@@ -87,9 +88,11 @@ void Board::init_graph(json board_json) {
     assert(board_json.find("width") != board_json.end());
     assert(board_json.find("n_players") != board_json.end());
     assert(board_json.find("nodes") != board_json.end());
+    assert(board_json.find("pacman_id") != board_json.end());
     
     // extract width + number of players
     width = board_json["width"];
+    pacman_id = board_json["pacman_id"];
     std::vector<int> vect(board_json["n_players"], EMPTY);
     p_locations = vect;
 
@@ -111,6 +114,15 @@ void Board::init_graph(json board_json) {
 //
 //
 
+void Board::set_pacman(int player_id) {
+    assert(p_locations[player_id] != EMPTY);
+    assert(pacman_id == NO_PACMAN_ID_SET);
+
+    pacman_id = player_id;
+
+    return;
+}
+
 // int add_player(player_id)
 //      adds player_id to the game at random i,j by: 
 //      adds player_id into the node vector
@@ -118,11 +130,12 @@ void Board::init_graph(json board_json) {
 //      returns the location where the player was inserted
 
 int Board::add_player(int player_id) {
+
     // choose random location to start at, redoing until one is open
     int ind;
     do {
         ind = get_loc(std::rand() % width, std::rand() % width);
-    } while (nodes[ind].player_id != EMPTY);
+    } while (nodes[ind].player_id != EMPTY || nodes[ind].node_type == blocked);
 
     return add_player(player_id, ind);
 }
@@ -199,6 +212,11 @@ int Board::delete_player(int player_id) {
         int loc = p_locations[player_id];
         nodes[loc].player_id = EMPTY;
         p_locations[player_id] = EMPTY;
+
+        if (pacman_id == player_id) {
+            pacman_id = NO_PACMAN_ID_SET;
+        }
+
         return loc;
     }
 }
@@ -223,6 +241,17 @@ int Board::get_width() {
     return width;
 }
 
+// int get_pacman_id()
+//      returns pacman_id
+
+int Board::get_pacman_id() {
+    return pacman_id;
+}
+
+bool Board::is_pacman_id_set() {
+    return pacman_id != NO_PACMAN_ID_SET;
+}
+
 // int get_node_player
 //      returns the player id at node i
 
@@ -230,11 +259,12 @@ int Board::get_node_player(int i) {
     return nodes[i].player_id;
 }
 
+
 // int get_node_type
 //      returns the typeof the node i
 
 nodetype Board::get_node_type(int i) {
-    return nodes[i].type;
+    return nodes[i].node_type;
 }
 
 // int, int get_yx(int loc)
@@ -280,6 +310,7 @@ void Board::print() {
 json Board::get_json() {
     json j;
     j["width"] = width;
+    j["pacman_id"] = pacman_id;
     j["n_players"] = p_locations.size();
     j["nodes"] = json::array();
     

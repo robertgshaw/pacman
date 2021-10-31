@@ -51,7 +51,7 @@ class Game {
         nlohmann::json get_board_json();
 
     private:
-        int n_players;                  // count of the number of players
+        int n_players;                  // count of the number of player
         bool exit_condition;            // exit condition to exit the game
 
         // synchronization objects

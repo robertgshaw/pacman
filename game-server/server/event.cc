@@ -20,6 +20,14 @@ nlohmann::json Add::get_json() {
     return j;
 }
 
+nlohmann::json SetPacman::get_json() {
+    nlohmann::json j;
+    j["set_pacman"]["pid"] = player_id;
+    j["set_pacman"]["loc"] = modifier;
+
+    return j;
+}
+
 nlohmann::json Quit::get_json() {
     nlohmann::json j;
     j["quit"]["pid"] = player_id;

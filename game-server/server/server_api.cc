@@ -414,6 +414,7 @@ bool read_from_socket(int cfd, char* buf_ptr, int sz) {
 //      returns true if successfully wrote entire message
 
 bool write_to_socket(int cfd, std::string msg) {
+
     int n_written = write(cfd, msg.c_str(), msg.size());
     if (n_written < msg.size()) {
         std::cerr << "Error writing to client on cdf " << std::to_string(cfd) << std::endl;

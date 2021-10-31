@@ -1,19 +1,39 @@
 import React from "react";
 import './BoardView.css';
 
+const backgroundDict = {
+    "blocked" : "blocked-square",
+    "coin" : "coin-square",
+    "open" : "open-square",
+};
+
+const colorDict = {
+    "ghost" : "ghost-sqaure",
+    "pacman" : "pacman-square",
+    "empty" : "empty-square"
+};
+
+const activeDict = {
+    "active" : "active-square",
+    "inactive" : "inactive-square" 
+}
+
 export const BoardView = (props) => {
     
-    const getSquareBackgroundColor = (squareType, playerId, activePlayer) => {
-        switch(squareType) {
-            case "blocked": 
-                return "background-gray";
-            default:
-                if(playerId === activePlayer) {
-                    return "background-yellow";
-                } else {
-                    return "background-white";
-                }
+    const getSquareFormat = (type, pacmanId, playerId, activePlayer) => {
+        const backgroundClass = backgroundDict[type];
+
+        let colorClass = "";
+        if (playerId === -1) {
+            colorClass = colorDict["empty"];
+        } else if (playerId === pacmanId) {
+            colorClass = colorDict["pacman"];
+        } else {
+            colorClass = colorDict["ghost"];
         }
+
+        const activeClass = playerId === activePlayer ? activeDict["active"] : activeDict["inactive"];
+        return backgroundClass + " " + colorClass + " " + activeClass;
     };
 
     const renderSquare = (i, j, width) => {
@@ -23,7 +43,7 @@ export const BoardView = (props) => {
             <SquareView
                 key={"Square-"+index}
                 value={playerId === -1 ? "" : playerId}
-                backgroundColor={getSquareBackgroundColor(props.squares[index].type, playerId, props.activePlayer)}
+                format={getSquareFormat(props.squares[index].type, props.pacmanId, playerId, props.activePlayer)}
             />
         );
     };
@@ -42,7 +62,7 @@ export const BoardView = (props) => {
 const SquareView = (props) => {
 
     return (
-        <button className={"square " + props.backgroundColor}>
+        <button className={"square " + props.format}>
             {props.value}
         </button>
     ); 

@@ -13,23 +13,24 @@
 #define LEFT 3
 #define NDIR 4
 #define EMPTY -1
+#define NO_PACMAN_ID_SET -1
 
 struct locpair {
     int old_loc;
     int new_loc;
 };
 
-enum nodetype { pacman, ghost, coin, open, blocked };
+enum nodetype { coin, open, blocked };
 
 class Node {
     public:
-        nodetype type;
+        nodetype node_type;
         int index;
         int player_id;
         std::vector<int> adj;
 
         // constructor
-        Node(int i, nodetype t): index(i), player_id(EMPTY), type(t), adj(NDIR, EMPTY) { }
+        Node(int i, nodetype t): index(i), player_id(EMPTY), node_type(t), adj(NDIR, EMPTY) { }
         
         // get_json representation of the node
         nlohmann::json get_json() {
@@ -38,7 +39,7 @@ class Node {
             j["player_id"] = player_id;
             nlohmann::json adj_json(adj);
             j["adj"] = adj_json;
-            j["type"] = type;
+            j["node_type"] = node_type;
 
             return j;
         }
@@ -46,7 +47,7 @@ class Node {
         void from_json(nlohmann::json node_json) {
             player_id = node_json["player_id"];
             adj = node_json["adj"].get<std::vector<int>>();
-            type = node_json["type"];
+            node_type = node_json["node_type"];
         }
 };
 
@@ -57,6 +58,7 @@ class Board {
         void init_graph(nlohmann::json board_json);
 
         // UPDATE THE BOARD STATE
+        void set_pacman(int player_id);
         int add_player(int player_id);
         int add_player(int player_id, int loc);
         struct locpair move_player(int player_id, int dir);
@@ -64,6 +66,8 @@ class Board {
 
         // STATE GETTERS
         int get_width();
+        int get_pacman_id();
+        bool is_pacman_id_set();
         int get_node_player(int i);
         nodetype get_node_type(int i);
         bool has_quit(int player_id);
@@ -76,6 +80,7 @@ class Board {
     private:
         // BOARD STATE
         int width;
+        int pacman_id;
         std::vector<Node> nodes;
         std::vector<int> p_locations;
 

@@ -5,6 +5,8 @@ const DOWN = 2;
 const LEFT = 3;
 const EMPTY = -1;
 
+const nodeTypeDict = { 0 : "coin", 1 : "open", 2 : "blocked"};
+
 // Board class
 //      model component of the MVC framework
 //      this class contains the data structure that holds the state + state update logic
@@ -17,13 +19,14 @@ class Board {
     //      call 'validate JSON' before constructor to check things work
     constructor(boardJSON, activePlayer) {  
         this.activePlayer = activePlayer;
+        this.pacmanId = boardJSON.pacman_id;
         this.nPlayers = boardJSON.n_players;
         this.width = boardJSON.width;
     
         this.nodes = boardJSON.nodes.map((node) => {
             let obj = {};
             obj.playerId = node.player_id;
-            obj.type = node.type === 4 ? "blocked" : "active";
+            obj.type = nodeTypeDict[node.node_type];
             return obj;
         });
 
@@ -35,12 +38,18 @@ class Board {
         }
     }
 
-    // updateNode(loc, playerId, nodeType, newPlayer)
+    // setPacman(playerId)
+    //      sets playerId as the pacmans
+    setPacman(playerId) {
+        this.pacmanId = playerId;
+        return this;
+    }
+
+    // updateNode(loc, playerId, newPlayer)
     //      utilitiy function that updates a node, handling updating each of the state vars
     //      (playerId, nodeType, and adding newPlayers)
-    updateNode(loc, playerId, nodeType=0, newPlayer=false) {
+    updateNode(loc, playerId, newPlayer=false) {
         this.nodes[loc].playerId = playerId;
-        this.nodes[loc].type = nodeType;
 
         if (playerId !== EMPTY) {
             if (newPlayer) {
@@ -86,7 +95,7 @@ class Board {
             return null;
         } else {
             this.nPlayers++;
-            this.updateNode(loc, playerId, 0, true);
+            this.updateNode(loc, playerId, true);
         } 
 
         return this;
@@ -127,8 +136,8 @@ class Board {
         } else if (!this.locIsEmpty(newLoc)) {
             console.log("ERROR: cannot move player new location is not empty");
         } else {
-            this.updateNode(newLoc, playerId, 0, false);
-            this.updateNode(loc, EMPTY, 0, false);
+            this.updateNode(newLoc, playerId, false);
+            this.updateNode(loc, EMPTY, false);
         }
     }    
 

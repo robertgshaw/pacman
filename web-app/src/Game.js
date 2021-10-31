@@ -108,9 +108,17 @@ const Game = () => {
 
     const displayBoard = () => {
         if (board.current === null) {
-            return <BoardView boardWidth={0} squares={squares} activePlayer={0}/>
+            return <BoardView 
+                        boardWidth={0} 
+                        squares={squares} 
+                        activePlayer={0}
+                        pacmanId={-1}/>
         } else {
-            return <BoardView boardWidth={board.current.width} squares={squares} activePlayer={board.current.activePlayer}/>
+            return <BoardView 
+                        boardWidth={board.current.width} 
+                        squares={squares} 
+                        activePlayer={board.current.activePlayer}
+                        pacmanId={board.current.pacmanId}/>
         }
     }
 

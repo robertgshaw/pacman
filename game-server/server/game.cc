@@ -74,8 +74,15 @@ std::tuple<int, json> Game::handle_add_player(int cfd) {
     std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
 
     // add player to the board + push to the changelog
-    int loc = board_.add_player(n_players);    
+    int loc = board_.add_player(n_players);
+
     changelog_.push(std::make_unique<Add>(Add(n_players,loc)));
+
+    // if no pacman is in the game, set next player added as pacman
+    if (!board_.is_pacman_id_set()) {
+        board_.set_pacman(n_players);
+        changelog_.push(std::make_unique<SetPacman>(SetPacman(n_players,loc)));
+    }
 
     // add the new player as a lister to the changelog
     changelog_.add_listener(n_players);

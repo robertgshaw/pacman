@@ -1,13 +1,42 @@
-.background-gray {
+.blocked-square {
   background-color: gray;
 }
 
-.background-white {
+.open-square {
   background-color: white;
 }
 
-.background-yellow {
+.coin-square {
+  background-color: white;
+}
+
+.ghost-square {
+  background-color: blue;
+}
+
+.pacman-square {
   background-color: yellow;
+}
+
+.empty-square {
+  color: black;
+}
+
+.inactive-square {
+  font-weight: normal;
+}
+
+.active-square {
+  font-weight: bold;
+  animation: blinkingText 2s infinite;
+}
+
+@keyframes blinkingText{
+		0%		{ color: #10c018;}
+		25%		{ color: #1056c0;}
+		50%		{ color: #ef0a1a;}
+		75%		{ color: #254878;}
+		100%	{ color: #04a1d5;}
 }
 
 body {

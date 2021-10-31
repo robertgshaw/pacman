@@ -34,6 +34,13 @@ class Add : public Event {
         nlohmann::json get_json();
 };
 
+// player added to game
+class SetPacman : public Event {
+    public:
+        using Event::Event;
+        nlohmann::json get_json();
+};
+
 // player quits the game
 class Quit : public Event {
     public:
