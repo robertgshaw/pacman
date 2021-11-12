@@ -16,7 +16,7 @@ const colorDict = {
 const activeDict = {
     "active" : "active-square",
     "inactive" : "inactive-square" 
-}
+};
 
 export const BoardView = (props) => {
     
@@ -60,7 +60,6 @@ export const BoardView = (props) => {
 };
 
 const SquareView = (props) => {
-
     return (
         <button className={"square " + props.format}>
             {props.value}

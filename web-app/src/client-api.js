@@ -22,6 +22,7 @@ import { Board, UP, DOWN, LEFT, RIGHT } from "./client-board.js";
 //              string recursively, handle each event one at a time
 //          passes the serverCommand JSON data to the server command handler
 //          returns an updated board object
+
 export function handleWebSocketEvent(board, ev) {    
     if (ev.data instanceof ArrayBuffer) {
         try {

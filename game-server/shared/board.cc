@@ -173,7 +173,7 @@ struct locpair Board::move_player(int player_id, int dir) {
     // invariant that the player_id passed is an actual player
     assert(player_id < p_locations.size() && p_locations[player_id] != EMPTY);
 
-    // get current loc of the plaer
+    // get current loc of the player
     int loc = p_locations[player_id];
     assert(nodes[loc].player_id == player_id); // both representations of data should be consistent
 
