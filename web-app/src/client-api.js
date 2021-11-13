@@ -31,6 +31,7 @@ export function handleWebSocketEvent(board, ev) {
             do {
                 // parse the message into separate json objects recursively
                 let end = getFirstJSONEndIndex(msg);
+                console.log(msg);
 
                 // handle the first json object event
                 board = handleServerCommand(JSON.parse(msg.substring(0, end)), board);
@@ -100,6 +101,12 @@ function handleServerCommand(serverCommand, board) {
 
     } else if ('quit' in serverCommand) {
         return handleCommand(serverCommand.quit, 'pid', 'loc', (playerId, loc) => {
+            const updatedBoard = board.removePlayer(playerId, loc);
+            return updatedBoard;
+        });
+
+    } else if ('delete' in serverCommand) {
+        return handleCommand(serverCommand.delete, 'pid', 'loc', (playerId, loc) => {
             const updatedBoard = board.removePlayer(playerId, loc);
             return updatedBoard;
         });

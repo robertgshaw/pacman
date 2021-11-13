@@ -80,7 +80,7 @@ void Board::init_graph(int w) {
 // void init_graph(int w):
 //      inits 2d graph of size w*w, with all edges to adjacent nodes in the graph connected
 //      inserts players into the graph
-//      called on the cleint side
+//      called on the client side
 
 void Board::init_graph(json board_json) {
     
@@ -159,6 +159,37 @@ int Board::add_player(int player_id, int loc) {
     return loc;
 }
 
+// int is_move_kill(player_id, dir) 
+//      checks if a move results in the pacman's death
+//      returns -1 if not
+//      returns the player_id of the pacman if yes
+
+int Board::is_move_kill(int player_id, int dir) {
+    // invariant that direction is UP (0), RIGHT (1), DOWN (2), or LEFT (3)
+    assert(dir < NDIR);
+
+    // invariant that the player_id passed is an actual player
+    assert(player_id < p_locations.size() && p_locations[player_id] != EMPTY);
+
+    // get current loc of the player
+    int loc = p_locations[player_id];
+    assert(nodes[loc].player_id == player_id); // both representations of data should be consistent
+
+    // get neighbor in the dir direction
+    int new_loc = nodes[loc].adj[dir];
+
+    // if move invalid or new_loc is empty, not a collision
+    if (new_loc == EMPTY || nodes[new_loc].player_id == EMPTY) {
+        return -1;
+    // if the pacman is either at loc or new_loc, the move killed the pacman
+    } else if (player_id == pacman_id || nodes[new_loc].player_id == pacman_id) {
+        return pacman_id;
+    // otherwise, the pacman wasn't involved
+    } else {
+        return -1;
+    }
+}
+
 // struct locpair move_player(player_id)
 //      moves player from current location updating in:
 //      nodes vector -- updating nodes.player_id
@@ -199,12 +230,18 @@ struct locpair Board::move_player(int player_id, int dir) {
 //      deletes player from current location updating in:
 //      nodes vector -- updating nodes[loc].player_id = -1
 //      p_locations vector -- updating p_locations[player_id] = -1
-//      returns location of the deleted player if deleted or -1 if not in the game 
+//      returns location of the deleted player if deleted
+//      returns -1 is player has already been deleted
+//      returns -2 if player id was invalid
 
 int Board::delete_player(int player_id) {
 
-    // if p_id invalid or player already deleted, return -1
-    if (player_id >= p_locations.size() || p_locations[player_id] == EMPTY) {
+    // if p_id invalid, return -2
+    if (player_id >= p_locations.size()) {
+        return -2;
+
+    // if the player has already been deleted, return -1
+    } else if (p_locations[player_id] == EMPTY) {
         return EMPTY;
 
     // otherwise, delete + return the deleted location
@@ -227,11 +264,11 @@ int Board::delete_player(int player_id) {
 //
 //
 
-// bool had_quit
-//      returns true if a player had already quit the game
+// bool is_active
+//      returns true if a player is active
 
-bool Board::has_quit(int player_id) {
-    return p_locations[player_id] == EMPTY;
+bool Board::is_active(int player_id) {
+    return p_locations[player_id] != EMPTY;
 }
 
 // int get_width()

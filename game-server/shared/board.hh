@@ -60,9 +60,9 @@ class Board {
         // UPDATE THE BOARD STATE
         void set_pacman(int player_id);
         int add_player(int player_id);
-        int add_player(int player_id, int loc);
         struct locpair move_player(int player_id, int dir);
         int delete_player(int player_id);
+        int is_move_kill(int player_id, int dir); 
 
         // STATE GETTERS
         int get_width();
@@ -70,7 +70,7 @@ class Board {
         bool is_pacman_id_set();
         int get_node_player(int i);
         nodetype get_node_type(int i);
-        bool has_quit(int player_id);
+        bool is_active(int player_id);
         std::tuple<int,int> get_yx(int loc);
 
         // SERIALIZE AND OUTPUT DATA
@@ -84,6 +84,10 @@ class Board {
         std::vector<Node> nodes;
         std::vector<int> p_locations;
 
+        // UPDATE THE BOARD STATE HELPER
+        int add_player(int player_id, int loc);
+
+        // CONVERT FROM X,Y to index
         int get_loc(int i, int j); // get loc of row i column j
 };
 

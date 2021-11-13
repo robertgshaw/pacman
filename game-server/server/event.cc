@@ -35,6 +35,13 @@ nlohmann::json Quit::get_json() {
     return j;
 }
 
+nlohmann::json Delete::get_json() {
+    nlohmann::json j;
+    j["delete"]["pid"] = player_id;
+    j["delete"]["loc"] = modifier;
+    return j;
+}
+
 nlohmann::json Exit::get_json() {
     nlohmann::json j;
     j["exit"]["pid"] = player_id;

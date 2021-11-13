@@ -48,6 +48,13 @@ class Quit : public Event {
         nlohmann::json get_json();
 };
 
+// player deleted from the game
+class Delete : public Event {
+    public:
+        using Event::Event;
+        nlohmann::json get_json();
+};
+
 // game is exited
 class Exit : public Event {
     public:

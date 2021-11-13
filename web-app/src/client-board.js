@@ -73,8 +73,13 @@ class Board {
         } else if (playerId > this.playerLocations.length) {
             console.log("ERROR: invalid player ID");
             return null;
-        } else if (this.playerLocations[playerId] !== loc || this.nodes[loc].playerId !== playerId) {
-            console.log("ERROR: loc is not equal to playerLocation[playerId] or this.nodes[loc].playerId != playerId");
+        } else if (this.playerLocations[playerId] === EMPTY) {
+            return this;
+        } else if (this.playerLocations[playerId] !== loc) {
+            console.log("ERROR: loc is not equal to playerLocation[playerId]");
+            return null;
+        } else if(this.nodes[loc].playerId !== playerId) {
+            console.log("this.nodes[loc].playerId != playerId");
             return null;
         } else {
             this.updateNode(this.playerLocations[playerId], EMPTY);

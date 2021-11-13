@@ -111,12 +111,39 @@ void Game::handle_request_move(int player_id, int dir) {
     std::unique_lock<std::mutex> lock_b(b_mutex, std::adopt_lock);
     std::unique_lock<std::mutex> lock_cl(cl_mutex, std::adopt_lock);
 
-    // try move; if successful, log change in the changelog and alert threads
-    struct locpair lp = board_.move_player(player_id, dir);
-    if(lp.new_loc != lp.old_loc) { 
-        changelog_.push(std::make_unique<Move>(Move(player_id, dir))); 
-        lock_cl.unlock(); 
-        
+    // if player already deleted, do nothing
+    if (!board_.is_active(player_id)) {
+        return;
+    }
+
+    bool notify = false;
+
+    // check if the move results in pacman killed (-1 means no)
+    int killed_id = board_.is_move_kill(player_id, dir);
+    
+    // if the pacman was killed due to the move, delete + push a quit notification
+    if (killed_id != -1) {
+        // delete + update other threads
+        int loc = board_.delete_player(killed_id);
+        if(loc != -1) {
+            changelog_.push(std::make_unique<Delete>(Delete(killed_id, loc)));
+            notify = true;
+        }
+    }
+
+    // if the moving player was not the one who was killed, do the move
+    if (killed_id != player_id) {
+        // try move; if successful, log change in the changelog and alert threads
+        struct locpair lp = board_.move_player(player_id, dir);
+        if(lp.new_loc != lp.old_loc) { 
+            changelog_.push(std::make_unique<Move>(Move(player_id, dir))); 
+            notify = true;
+        }
+    }
+
+    // notify the changelog
+    if (notify) {
+        lock_cl.unlock();
         cl_cv.notify_all();
     }
 
@@ -136,7 +163,7 @@ void Game::handle_request_quit(int player_id) {
    
     // try delete; if successful, log the chnage in the changelog and alter threads
     int loc = board_.delete_player(player_id);
-    if(loc != -1) {
+    if(loc != -2) {
         changelog_.push(std::make_unique<Quit>(Quit(player_id, loc)));
         lock_cl.unlock();
         cl_cv.notify_all();

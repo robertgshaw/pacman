@@ -347,7 +347,6 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
             is_connected = false;
         }
     }
-
     return;
 }
 
@@ -362,15 +361,6 @@ void handle_changelog(int cfd, int player_id, Game* g_ptr) {
 //      will be of form BOARD len=[xxx], body=[board]...
 
 std::string format_server_msg(nlohmann::json command, const char* header, const char* body_header) {
-    // // extract the body into string form
-    // std::string body_str = command.dump();
-
-    // // create the message to send
-    // std::string msg = header;                       // COMMAND len=
-    // msg.append(std::to_string(body_str.size()));    // COMMAND len=xxx
-    // msg.append(body_header);                        // COMMAND len=xxx, body=
-    // msg.append(body_str);                           // COMMAND len=xxx, body=abcdef...
-
     return command.dump();
 }
 
