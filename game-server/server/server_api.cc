@@ -268,6 +268,7 @@ bool handle_request(json request, int cfd, int player_id, Game* g_ptr) {
         int dir = request["move"];
         if (dir == UP || dir == DOWN || dir == LEFT || dir == RIGHT) {
             g_ptr->handle_request_move(player_id, dir);
+            
         }    
     }
 

@@ -1,40 +1,25 @@
 import React from "react";
 import './BoardView.css';
-
-const backgroundDict = {
-    "blocked" : "blocked-square",
-    "coin" : "coin-square",
-    "open" : "open-square",
-};
-
-const colorDict = {
-    "ghost" : "ghost-sqaure",
-    "pacman" : "pacman-square",
-    "empty" : "empty-square"
-};
-
-const activeDict = {
-    "active" : "active-square",
-    "inactive" : "inactive-square" 
-};
+import { EMPTY, nodeTypeDictInv } from "./client-board";
 
 export const BoardView = (props) => {
     
-    const getSquareFormat = (type, pacmanId, playerId, activePlayer) => {
-        const backgroundClass = backgroundDict[type];
-
-        let colorClass = "";
+    const getPlayerType = (pacmanId, playerId) => {
         if (playerId === -1) {
-            colorClass = colorDict["empty"];
+            return "empty";
         } else if (playerId === pacmanId) {
-            colorClass = colorDict["pacman"];
+            return "pacman";
         } else {
-            colorClass = colorDict["ghost"];
+            return "ghost";
         }
+    }
 
-        const activeClass = playerId === activePlayer ? activeDict["active"] : activeDict["inactive"];
-        return backgroundClass + " " + colorClass + " " + activeClass;
-    };
+    const getSquareType = (nodeType, playerId) => {
+        if (playerId !== EMPTY) {
+            return "occupied";
+        }
+        return nodeTypeDictInv[nodeType];
+    }
 
     const renderSquare = (i, j, width) => {
         const index = i * width + j;
@@ -42,8 +27,9 @@ export const BoardView = (props) => {
         return (
             <SquareView
                 key={"Square-"+index}
-                value={playerId === -1 ? "" : playerId}
-                format={getSquareFormat(props.squares[index].type, props.pacmanId, playerId, props.activePlayer)}
+                playerType={getPlayerType(playerId, props.pacmanId)}
+                squareType={getSquareType(props.squares[index].nodeType, playerId)}
+                activeType={playerId === props.activePlayer ? "active" : "inactive"}
             />
         );
     };
@@ -60,10 +46,51 @@ export const BoardView = (props) => {
 };
 
 const SquareView = (props) => {
-    return (
-        <button className={"square " + props.format}>
-            {props.value}
-        </button>
-    ); 
+    let squareInnerView;
+    if (props.squareType === "occupied"){
+        squareInnerView = <SquareInnerViewOccupied playerType={props.playerType} activeType={props.activeType}/>
+    } else {
+        squareInnerView = <SquareInnerViewEmpty nodeType={props.squareType}/>
+    }
+
+    return <div className="square">{squareInnerView}</div>; 
 };
+
+const SquareInnerViewOccupied = (props) => {
+    if (props.playerType === "pacman") {
+        return <PacmanInnerView activeType={props.activeType}/>;
+    } else {
+        return <GhostInnerView activeType={props.activeType}/>;
+    }
+}
+
+const SquareInnerViewEmpty = (props) => {
+    if (props.nodeType === "blocked") {
+        return <BlockedInnerView/>;
+    } else if (props.nodeType === "coin") {
+        return <CoinInnerView/>;
+    } else {
+        return <OpenInnerView/>;
+    }
+}
+
+const PacmanInnerView = (props) => {
+    return <div className={"inner pacman-inner " + (props.activeType === "active" ? "active-inner" : "")}></div>;
+}
+
+const GhostInnerView = (props) => {
+    return <div className={"inner ghost-inner " + (props.activeType === "active" ? "active-inner" : "")}></div>;
+}
+
+const BlockedInnerView = () => {
+    return <div className={"inner blocked-inner"}></div>;
+}
+
+const CoinInnerView = () => {
+    return <div className={"inner coin-inner"}></div>;
+}
+
+const OpenInnerView = () => {
+    return <div className={"inner open-inner"}></div>;
+}
 

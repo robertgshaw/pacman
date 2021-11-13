@@ -55,7 +55,7 @@ class Board {
     public:
         // INITIALZES THE UNDERLYING GRAPH
         void init_graph(int w);
-        void init_graph(nlohmann::json board_json);
+        // void init_graph(nlohmann::json board_json);
 
         // UPDATE THE BOARD STATE
         void set_pacman(int player_id);
@@ -81,6 +81,7 @@ class Board {
         // BOARD STATE
         int width;
         int pacman_id;
+        int pacman_score;
         std::vector<Node> nodes;
         std::vector<int> p_locations;
 

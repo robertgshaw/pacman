@@ -17,6 +17,7 @@ void Board::init_graph(int w) {
     assert(w % 2 == 1);
     width = w;
     pacman_id = NO_PACMAN_ID_SET;
+    pacman_score = 0;
 
     nodetype t;
     int y, x;
@@ -74,37 +75,6 @@ void Board::init_graph(int w) {
             loc = get_loc(y, x - 1);
             nodes[i].adj[LEFT] = nodes[loc].node_type == blocked ? EMPTY : loc;
         }
-    }
-}
-
-// void init_graph(int w):
-//      inits 2d graph of size w*w, with all edges to adjacent nodes in the graph connected
-//      inserts players into the graph
-//      called on the client side
-
-void Board::init_graph(json board_json) {
-    
-    // TDD: invariant that we are passed right API syntax 
-    assert(board_json.find("width") != board_json.end());
-    assert(board_json.find("n_players") != board_json.end());
-    assert(board_json.find("nodes") != board_json.end());
-    assert(board_json.find("pacman_id") != board_json.end());
-    
-    // extract width + number of players
-    width = board_json["width"];
-    pacman_id = board_json["pacman_id"];
-    std::vector<int> vect(board_json["n_players"], EMPTY);
-    p_locations = vect;
-
-    // extract the nodes from the json
-    for(auto it : board_json["nodes"]) {
-        Node nd(it["index"], it["type"]);
-        nd.from_json(it);
-        if (nd.player_id != EMPTY) {
-            p_locations[nd.player_id] = nd.index;
-        }
-
-        nodes.push_back(nd);
     }
 }
 
@@ -216,6 +186,12 @@ struct locpair Board::move_player(int player_id, int dir) {
         // update nodes vector
         nodes[new_loc].player_id = player_id;
         nodes[loc].player_id = EMPTY;
+
+        // if player that moved was the pacman, pickup the coin
+        if (player_id == pacman_id && nodes[new_loc].node_type == coin) {
+            nodes[new_loc].node_type = open;
+            pacman_score++;
+        }
 
         // update p_locations vector
         p_locations[player_id] = new_loc;
@@ -331,8 +307,12 @@ void Board::print() {
                 str.append(" ");
                 str.append(std::to_string(nodes[loc].player_id));
                 str.append(" ");
+            } else if (nodes[loc].node_type == coin) {
+                str += " C ";
+            } else if (nodes[loc].node_type == blocked) {
+                str += " B ";
             } else {
-                str += " X ";
+                str += " x ";
             }
         }
         str += "\n";
@@ -348,6 +328,7 @@ json Board::get_json() {
     json j;
     j["width"] = width;
     j["pacman_id"] = pacman_id;
+    j["pacman_score"] = pacman_score;
     j["n_players"] = p_locations.size();
     j["nodes"] = json::array();
     

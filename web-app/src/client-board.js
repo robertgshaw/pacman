@@ -5,7 +5,9 @@ const DOWN = 2;
 const LEFT = 3;
 const EMPTY = -1;
 
-const nodeTypeDict = { 0 : "coin", 1 : "open", 2 : "blocked"};
+const nodeTypeDict = { "coin" : 0, "open" : 1, "blocked" : 2 };
+const nodeTypeDictInv = { 0 : "coin", 1 : "open", 2 : "blocked" };
+
 
 // Board class
 //      model component of the MVC framework
@@ -20,13 +22,14 @@ class Board {
     constructor(boardJSON, activePlayer) {  
         this.activePlayer = activePlayer;
         this.pacmanId = boardJSON.pacman_id;
+        this.pacmanScore = boardJSON.pacman_score;
         this.nPlayers = boardJSON.n_players;
         this.width = boardJSON.width;
     
         this.nodes = boardJSON.nodes.map((node) => {
             let obj = {};
             obj.playerId = node.player_id;
-            obj.type = nodeTypeDict[node.node_type];
+            obj.nodeType = node.node_type;
             return obj;
         });
 
@@ -45,21 +48,36 @@ class Board {
         return this;
     }
 
-    // updateNode(loc, playerId, newPlayer)
+    // updateState(loc, playerId, newPlayer)
     //      utilitiy function that updates a node, handling updating each of the state vars
     //      (playerId, nodeType, and adding newPlayers)
-    updateNode(loc, playerId, newPlayer=false) {
+    //      updates the node at "loc" to hold playerID + updates the nodeType (incrementing pacman score)
+    //      updates the playerLocations array to hold the loc of the new player id
+
+    updateState(loc, playerId, newPlayer=false) {
+        // update nodes[loc]
         this.nodes[loc].playerId = playerId;
 
+        // update playerLocations[playerId]
         if (playerId !== EMPTY) {
+
+            // if new player, append to the playerLocations array
             if (newPlayer) {
                 if (this.playerLocations.length !== playerId) {
                     console.log("ERROR: could not update node due to data inconsistency");
                 } else {
                     this.playerLocations.push(loc);
                 }
+
+            // otherwise, just update the player location array
             } else {
                 this.playerLocations[playerId] = loc;
+
+                // if we had the pacman making the move, update the nodeTypes from coin to open + increment score
+                if (playerId === this.pacmanId && this.nodes[loc].nodeType === nodeTypeDict["coin"]) {
+                    this.nodes[loc].nodeType = nodeTypeDict["open"];
+                    this.pacmanScore++;
+                }
             }
         }
     }
@@ -82,7 +100,7 @@ class Board {
             console.log("this.nodes[loc].playerId != playerId");
             return null;
         } else {
-            this.updateNode(this.playerLocations[playerId], EMPTY);
+            this.updateState(this.playerLocations[playerId], EMPTY);
             this.playerLocations[playerId] = EMPTY;
         }
 
@@ -100,7 +118,7 @@ class Board {
             return null;
         } else {
             this.nPlayers++;
-            this.updateNode(loc, playerId, true);
+            this.updateState(loc, playerId, true);
         } 
 
         return this;
@@ -141,8 +159,8 @@ class Board {
         } else if (!this.locIsEmpty(newLoc)) {
             console.log("ERROR: cannot move player new location is not empty");
         } else {
-            this.updateNode(newLoc, playerId, false);
-            this.updateNode(loc, EMPTY, false);
+            this.updateState(newLoc, playerId, false);
+            this.updateState(loc, EMPTY, false);
         }
     }    
 
@@ -175,4 +193,4 @@ class Board {
     }
 }
 
-export { Board, UP, DOWN, LEFT, RIGHT, EMPTY }
+export { Board, nodeTypeDictInv, UP, DOWN, LEFT, RIGHT, EMPTY }

@@ -1,48 +1,60 @@
-.blocked-square {
+.inner {
+  display: inline-block;
+}
+
+.blocked-inner {
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
   background-color: gray;
 }
 
-.open-square {
-  background-color: white;
+.coin-inner {
+  top:0;
+  left:0;
+  width:50%;
+  height:50%;
+  border-radius: 50%;
+  background-color: rgb(122, 122, 78);
 }
 
-.coin-square {
-  background-color: white;
-}
-
-.ghost-square {
-  background-color: blue;
-}
-
-.pacman-square {
+.pacman-inner {
+  top:0;
+  left:0;
+  width:75%;
+  height:75%;
+  border-radius: 50%;
   background-color: yellow;
+  border-color:yellow;
 }
 
-.empty-square {
-  color: black;
+.ghost-inner {
+  top:0;
+  left:0;
+  width:75%;
+  height:75%;
+  border-radius: 50%;
+  background-color: darkblue;
+  border-color:darkblue;
 }
 
-.inactive-square {
-  font-weight: normal;
+.active-inner {
+  animation: blinkingBackground 2s infinite
 }
 
-.active-square {
-  font-weight: bold;
-  animation: blinkingText 2s infinite;
-}
-
-@keyframes blinkingText{
-		0%		{ color: #10c018;}
-		25%		{ color: #1056c0;}
-		50%		{ color: #ef0a1a;}
-		75%		{ color: #254878;}
-		100%	{ color: #04a1d5;}
+@keyframes blinkingText {
+		0%		{ boarder-color: #10c018;}
+		25%		{ boarder-color: #1056c0;}
+		50%		{ boarder-color: #ef0a1a;}
+		75%		{ boarder-color: #254878;}
+		100%	{ boarder-color: #04a1d5;}
 }
 
 body {
     font: 14px "Century Gothic", Futura, sans-serif;
     margin: 20px;
-  }
+}
   
 ol, ul {
   padding-left: 30px;
@@ -54,32 +66,22 @@ ol, ul {
   display: table;
 }
   
-.status {
-  margin-bottom: 10px;
-}
-  
 .square {
-  border: 1px solid #999;
+  position: relative;
+  text-align: center;
   float: left;
-  font-size: 24px;
-  font-weight: bold;
+  border: 1px solid rgb(214, 209, 209);
+  background-color: white;
   line-height: 34px;
   height: 34px;
+  width: 34px;
+  font-size: 24px;
+  font-weight: bold;
   margin-right: -1px;
   margin-top: -1px;
   padding: 0;
-  text-align: center;
-  width: 34px;
 }
-  
-.square:focus {
-  outline: none;
-}
-  
-.kbd-navigation .square:focus {
-  background: #ddd;
-}
-  
+    
 .game {
   display: flex;
   flex-direction: row;

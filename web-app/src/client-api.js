@@ -31,7 +31,7 @@ export function handleWebSocketEvent(board, ev) {
             do {
                 // parse the message into separate json objects recursively
                 let end = getFirstJSONEndIndex(msg);
-                console.log(msg);
+                // console.log(msg);
 
                 // handle the first json object event
                 board = handleServerCommand(JSON.parse(msg.substring(0, end)), board);

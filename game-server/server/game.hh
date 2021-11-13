@@ -29,7 +29,6 @@
 //          create_player: adds new player to the board --- creates event
 //          move_player: moves the player in the board --- create event
 //          get_next_event: blocks until new event in the CL queue
-//
 
 class Game {
     public:
